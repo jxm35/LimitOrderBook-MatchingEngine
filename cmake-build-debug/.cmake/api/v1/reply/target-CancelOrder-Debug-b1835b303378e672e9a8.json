@@ -1,0 +1,211 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "CancelOrder/libCancelOrder.a"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"include_directories",
+			"target_include_directories",
+			"target_link_libraries"
+		],
+		"files" : 
+		[
+			"CancelOrder/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 12,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 23,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 24,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 6,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 9,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk -mmacosx-version-min=13.0 -fcolor-diagnostics"
+				},
+				{
+					"fragment" : "-std=gnu++20"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 3,
+					"path" : "/opt/homebrew/Cellar/boost/1.82.0_1/include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "/opt/homebrew/Cellar/spdlog/1.12.0/include"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/opt/homebrew/Cellar/fmt/10.1.1/include"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/CancelOrder"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderCore"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/Order"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/RejectOrder"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderStatusResolver"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderStatus"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/RejectionResolver"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderBookEntry"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/Limit"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderBook"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/MatchResult"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/Security"
+				},
+				{
+					"backtrace" : 7,
+					"isSystem" : true,
+					"path" : "/opt/homebrew/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					1
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"id" : "OrderStatusResolver::@109da096c6951ae58ff2"
+		}
+	],
+	"id" : "CancelOrder::@c8f3f0d688a7962bc963",
+	"name" : "CancelOrder",
+	"nameOnDisk" : "libCancelOrder.a",
+	"paths" : 
+	{
+		"build" : "CancelOrder",
+		"source" : "CancelOrder"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				1
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "CancelOrder/CancelOrder.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "CancelOrder/CancelOrder.h",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

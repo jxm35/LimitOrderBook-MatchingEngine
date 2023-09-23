@@ -1,0 +1,211 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "OrderCore/libOrderCore.a"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"include_directories",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"OrderCore/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 12,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 23,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 24,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 6,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk -mmacosx-version-min=13.0 -fcolor-diagnostics"
+				},
+				{
+					"fragment" : "-std=gnu++20"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 0,
+					"define" : "FMT_SHARED"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 3,
+					"path" : "/opt/homebrew/Cellar/boost/1.82.0_1/include"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "/opt/homebrew/Cellar/spdlog/1.12.0/include"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/opt/homebrew/Cellar/fmt/10.1.1/include"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderCore"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/Order"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/CancelOrder"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/RejectOrder"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderStatusResolver"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderStatus"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/RejectionResolver"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderBookEntry"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/Limit"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/OrderBook"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/MatchResult"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/Security"
+				},
+				{
+					"backtrace" : 0,
+					"isSystem" : true,
+					"path" : "/opt/homebrew/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					0
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"id" : "Order::@5d4f2663b84beb4120b3"
+		}
+	],
+	"id" : "OrderCore::@3cd9e2373bb9bae46a0f",
+	"name" : "OrderCore",
+	"nameOnDisk" : "libOrderCore.a",
+	"paths" : 
+	{
+		"build" : "OrderCore",
+		"source" : "OrderCore"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				1
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "OrderCore/OrderCore.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "OrderCore/OrderCore.h",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

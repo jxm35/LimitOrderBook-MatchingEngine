@@ -1,0 +1,5 @@
+if(EXISTS "/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/cmake-build-debug/OrderBookTests/SomeTests[1]_tests.cmake")
+  include("/Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/cmake-build-debug/OrderBookTests/SomeTests[1]_tests.cmake")
+else()
+  add_test(SomeTests_NOT_BUILT SomeTests_NOT_BUILT)
+endif()
