@@ -1,5 +1,0 @@
-add_test([=[OrderBookTests.OrderBookInitialisesCorrectly]=]  /Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/cmake-build-debug/OrderBookTests/SomeTests [==[--gtest_filter=OrderBookTests.OrderBookInitialisesCorrectly]==] --gtest_also_run_disabled_tests)
-set_tests_properties([=[OrderBookTests.OrderBookInitialisesCorrectly]=]  PROPERTIES WORKING_DIRECTORY /Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/cmake-build-debug/OrderBookTests SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
-add_test([=[OrderBookTests.CanAddBids]=]  /Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/cmake-build-debug/OrderBookTests/SomeTests [==[--gtest_filter=OrderBookTests.CanAddBids]==] --gtest_also_run_disabled_tests)
-set_tests_properties([=[OrderBookTests.CanAddBids]=]  PROPERTIES WORKING_DIRECTORY /Users/james/Documents/sideProjects/LimitOrderBook-MatchingEngine/cmake-build-debug/OrderBookTests SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
-set(  SomeTests_TESTS OrderBookTests.OrderBookInitialisesCorrectly OrderBookTests.CanAddBids)
