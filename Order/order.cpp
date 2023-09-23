@@ -21,7 +21,7 @@ void Order::IncreaseQuantity(uint16_t quantity) {
 }
 void Order::DecreaseQuantity(uint16_t quantity) {
     if (quantity > currentQuantity_)
-        throw std::invalid_argument(fmt::format("Quantity decrease greater than current quantity for OrderId: {}", orderId_));
+        throw std::invalid_argument(fmt::format("Quantity decrease greater than current quantity for OrderId: {}", OrderId()));
     currentQuantity_ -= quantity;
 }
 

@@ -3,8 +3,8 @@
 
 OrderBook::OrderBook(Security instrument) {
     instrument_ = instrument;
-    askLimits_ = std::set<Limit, SortAsks>();
-    bidLimits_ = std::set<Limit, SortBids>();
+    askLimits_ = std::map<long, Limit*, std::less<>>();
+    bidLimits_ = std::map<long, Limit*, std::greater<>>();
     orders_ = std::unordered_map<long, OrderBookEntry >();
 }
 
@@ -19,56 +19,50 @@ bool OrderBook::ContainsOrder(long orderId) {
 OrderBookSpread OrderBook::GetSpread() {
     boost::optional<long> bestAsk = boost::none;
     boost::optional<long> bestBid = boost::none;
-    if (!askLimits_.empty() && askLimits_.begin()->head_ != nullptr) {
-        bestAsk = askLimits_.begin()->Price();
+    if (!askLimits_.empty() && askLimits_.begin()->second->head_ != nullptr) {
+        bestAsk = askLimits_.begin()->second->Price();
     }
-    if (!bidLimits_.empty() && bidLimits_.begin()->head_ != nullptr) {
-        bestBid = bidLimits_.begin()->Price();
+    if (!bidLimits_.empty() && bidLimits_.begin()->second->head_ != nullptr) {
+        bestBid = bidLimits_.begin()->second->Price();
     }
     return OrderBookSpread(bestBid, bestAsk);
 }
 
 void OrderBook::AddOrder(Order order) {
-    Limit baseLimit(order.Price());
-    if (order.IsBuy()) {
-        AddOrderInner(order, baseLimit, bidLimits_, orders_);
-    } else {
-        AddOrderInner(order, baseLimit, askLimits_, orders_);
-    }
+    order.IsBuy() ?
+    AddOrder(order, order.Price(),  bidLimits_ , orders_)
+    : AddOrder(order, order.Price(),  askLimits_, orders_);
 }
 
 void OrderBook::ChangeOrder(ModifyOrder modifyOrder) {
-    if (orders_.contains(modifyOrder.orderId_)) {
-        OrderBookEntry obe = orders_.at(modifyOrder.orderId_);
+    if (orders_.contains(modifyOrder.OrderId())) {
+        OrderBookEntry obe = orders_.at(modifyOrder.OrderId());
         RemoveOrder(modifyOrder.ToCancelOrder());
-        if (obe.CurrentOrder().IsBuy()) {
-            AddOrderInner(modifyOrder.ToNewOrder(),  *obe.Limit(), bidLimits_, orders_);
-        } else {
-            AddOrderInner(modifyOrder.ToNewOrder(), *obe.Limit(), askLimits_, orders_);
-        }
+        obe.CurrentOrder().IsBuy() ?
+        AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(),  bidLimits_ , orders_)
+        : AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(),  askLimits_, orders_);
     }
 
 }
 
 void OrderBook::RemoveOrder(CancelOrder cancelOrder) {
-    if (orders_.contains(cancelOrder.orderId_)) {
-        OrderBookEntry obe = orders_.at(cancelOrder.orderId_);
-        RemoveOrderInner(cancelOrder.orderId_, &obe, orders_);
-
+    if (orders_.contains(cancelOrder.OrderId())) {
+        OrderBookEntry obe = orders_.at(cancelOrder.OrderId());
+        RemoveOrderInner(cancelOrder.OrderId(), &obe, orders_);
+    } else {
+        throw std::invalid_argument("order id not found");
     }
-
 }
 
-std::list<OrderBookEntry*> OrderBook::GetAskOrders() {
-    std::list<OrderBookEntry*> orderBookEntries;
+std::list<OrderBookEntry> OrderBook::GetAskOrders() {
+    std::list<OrderBookEntry> orderBookEntries;
     for(const auto & askLimit : askLimits_) {
-        if (askLimit.IsEmpty()) {
+        if (askLimit.second->IsEmpty()) {
             continue;
         }
-        OrderBookEntry *askLimitPtr = askLimit.head_;
-        orderBookEntries.push_back(askLimitPtr);
+        OrderBookEntry *askLimitPtr = askLimit.second->head_;
         while (askLimitPtr != nullptr) {
-            orderBookEntries.push_back(askLimitPtr);
+            orderBookEntries.push_back(*askLimitPtr);
             askLimitPtr = askLimitPtr->next;
         }
     }
@@ -78,80 +72,53 @@ std::list<OrderBookEntry*> OrderBook::GetAskOrders() {
 std::list<OrderBookEntry> OrderBook::GetBidOrders() {
     std::list<OrderBookEntry> orderBookEntries;
     for(const auto & bidLimit : bidLimits_) {
-        if (bidLimit.IsEmpty()) {
+        if (bidLimit.second->IsEmpty()) {
             continue;
         }
-        OrderBookEntry *bidLimitPtr = bidLimit.head_;
+        OrderBookEntry *bidLimitPtr = bidLimit.second->head_;
         while (bidLimitPtr != nullptr) {
-            OrderBookEntry obe = *bidLimitPtr;
-            orderBookEntries.push_back(obe);
+            orderBookEntries.push_back(*bidLimitPtr);
             bidLimitPtr = bidLimitPtr->next;
         }
     }
     return orderBookEntries;
 }
 
-void OrderBook::AddOrderInner(Order order,Limit baseLimit, std::set<Limit, SortAsks>& limitLevels,
+template <typename sort>
+void OrderBook::AddOrder(Order order,long price, std::map<long, Limit*, sort>& limitLevels,
                               std::unordered_map<long, OrderBookEntry>& internalOrderBook) {
-    if (limitLevels.contains(baseLimit)) {
-        auto lim = limitLevels.find(baseLimit);
+    if (limitLevels.contains(price)) {
+        auto lim = limitLevels.find(price);
         if (lim != limitLevels.end()) {
-            OrderBookEntry orderBookEntry(&baseLimit, order);
-            if (lim->head_ == nullptr) {
+            OrderBookEntry *orderBookEntry = new OrderBookEntry(lim->second, order);
+            if (lim->second->head_ == nullptr) {
                 // no orders on this level
-                lim->head_ = &orderBookEntry;
-                lim->tail_ = &orderBookEntry;
+                lim->second->head_ = orderBookEntry;
+                lim->second->tail_ = orderBookEntry;
             } else {
                 // we have orders on this level
-                OrderBookEntry *tailEntry = lim->tail_;
-                tailEntry->next = &orderBookEntry;
-                orderBookEntry.previous = tailEntry;
-                lim->tail_ = &orderBookEntry;
-            }
-        } else {
-            throw "we are supposed to have a limit";
-        }
-    } else {
-        // level does not exist
-        limitLevels.insert(baseLimit);
-        OrderBookEntry orderBookEntry(&baseLimit, order);
-        baseLimit.head_ = &orderBookEntry;
-        baseLimit.tail_ = &orderBookEntry;
-        internalOrderBook[order.orderId_] = orderBookEntry;
-    }
-}
-void OrderBook::AddOrderInner(Order order,Limit baseLimit, std::set<Limit, SortBids>& limitLevels,
-                              std::unordered_map<long, OrderBookEntry>& internalOrderBook) {
-    if (limitLevels.contains(baseLimit)) {
-        auto lim = limitLevels.find(baseLimit);
-        if (lim != limitLevels.end()) {
-            OrderBookEntry *orderBookEntry = new OrderBookEntry(&baseLimit, order);
-            if (lim->head_ == nullptr) {
-                // no orders on this level
-                lim->head_ = orderBookEntry;
-                lim->tail_ = orderBookEntry;
-            } else {
-                // we have orders on this level
-                OrderBookEntry *tailEntry = lim->tail_;
+                OrderBookEntry *tailEntry = lim->second->tail_;
                 tailEntry->next = orderBookEntry;
                 orderBookEntry->previous = tailEntry;
-                lim->tail_ = orderBookEntry;
+                lim->second->tail_ = orderBookEntry;
             }
+            internalOrderBook[order.OrderId()] = *orderBookEntry;
         } else {
             throw "we are supposed to have a limit";
         }
     } else {
         // level does not exist
-        OrderBookEntry *orderBookEntry = new OrderBookEntry(&baseLimit, order);
-        baseLimit.head_ = orderBookEntry;
-        baseLimit.tail_ = orderBookEntry;
-        limitLevels.insert(baseLimit);
-        internalOrderBook[order.orderId_] = *orderBookEntry;
+        Limit *limit = new Limit(price);
+        OrderBookEntry *orderBookEntry = new OrderBookEntry(limit, order);
+        limit->head_ = orderBookEntry;
+        limit->tail_ = orderBookEntry;
+        limitLevels[price] = limit;
+        internalOrderBook[order.OrderId()] = *orderBookEntry;
     }
 }
 
 void OrderBook::RemoveOrderInner(long orderId, OrderBookEntry *obe,
-                                 std::unordered_map<long, OrderBookEntry> internalOrderBook) {
+                                 std::unordered_map<long, OrderBookEntry>& internalOrderBook) {
     // remove from limit linked list
     if (obe->previous != nullptr &&obe->next != nullptr) {
         obe->next->previous = obe->previous;
@@ -163,14 +130,13 @@ void OrderBook::RemoveOrderInner(long orderId, OrderBookEntry *obe,
     }
 
     // remove from limit obj
-    if (obe->Limit()->head_ == obe && obe->Limit()->tail_ == obe) {
+    if (obe->Limit()->head_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId() && obe->Limit()->tail_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
         obe->Limit()->head_ = nullptr;
         obe->Limit()->tail_ = nullptr;
-    } else if (obe->Limit()->head_ == obe) {
+    } else if (obe->Limit()->head_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
         obe->Limit()->head_ = obe->next;
-    } else if (obe->Limit()->tail_ == obe) {
+    } else if (obe->Limit()->tail_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
         obe->Limit()->tail_ = obe->previous;
     }
     internalOrderBook.erase(orderId);
-
 }

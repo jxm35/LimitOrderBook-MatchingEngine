@@ -3,7 +3,6 @@
 #include <boost/optional.hpp>
 #include <list>
 #include <unordered_map>
-#include <set>
 #include <map>
 
 #include "order.h"
@@ -48,7 +47,7 @@ public:
 class IRetrievalEntryOrderBook: IOrderEntryOrderBook {
 public:
     virtual ~IRetrievalEntryOrderBook() { }
-    virtual std::list<OrderBookEntry*> GetAskOrders() = 0;
+    virtual std::list<OrderBookEntry> GetAskOrders() = 0;
     virtual std::list<OrderBookEntry> GetBidOrders() = 0;
 
 };
@@ -63,15 +62,17 @@ public:
 class OrderBook: IRetrievalEntryOrderBook {
 private:
     Security instrument_;
-    // sorted sets
-    std::set<Limit, SortAsks> askLimits_;
-    std::set<Limit, SortBids> bidLimits_;
+
+    // sorted maps
+    std::map<long, Limit*, std::less<>> askLimits_;
+    std::map<long, Limit*, std::greater<>> bidLimits_;
+
     // dictionary
     std::unordered_map<long, OrderBookEntry> orders_;
 
-    static void AddOrderInner(Order order, Limit limit, std::set<Limit, SortAsks>& limitLevels, std::unordered_map<long, OrderBookEntry>& internalOrderBook);
-    static void AddOrderInner(Order order, Limit limit, std::set<Limit, SortBids>& limitLevels, std::unordered_map<long, OrderBookEntry>& internalOrderBook);
-    static void RemoveOrderInner(long orderId, OrderBookEntry *obe, std::unordered_map<long, OrderBookEntry> internalOrderBook);
+    template <typename sort>
+    static void AddOrder(Order order, long price, std::map<long, Limit*, sort>& limitLevels, std::unordered_map<long, OrderBookEntry>& internalOrderBook);
+    static void RemoveOrderInner(long orderId, OrderBookEntry *obe, std::unordered_map<long, OrderBookEntry>& internalOrderBook);
 
 public:
     OrderBook(Security instrument);
@@ -81,7 +82,7 @@ public:
     void AddOrder(Order order);
     void ChangeOrder(ModifyOrder modifyOrder);
     void RemoveOrder(CancelOrder cancelOrder) ;
-    std::list<OrderBookEntry*> GetAskOrders();
+    std::list<OrderBookEntry> GetAskOrders();
     std::list<OrderBookEntry> GetBidOrders();
 
 };

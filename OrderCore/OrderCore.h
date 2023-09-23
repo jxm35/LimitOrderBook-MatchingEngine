@@ -3,12 +3,15 @@
 #include "string"
 
 class OrderCore {
-public:
+private:
+    static long ID;
+
     long orderId_;
     std::string username_;
     int securityId_;
 
 public:
+    OrderCore(std::string username, int securityId);
     OrderCore(long orderId, std::string username, int securityId);
 
     inline long OrderId() const {

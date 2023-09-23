@@ -31,10 +31,10 @@ public:
     }
 
     bool operator== (const OrderBookEntry &rhs) {
-        return this->currentOrder_.orderId_ == rhs.currentOrder_.orderId_;
+        return this->currentOrder_.OrderId() == rhs.currentOrder_.OrderId();
     }
     bool operator!= (const OrderBookEntry &rhs) {
-        return this->currentOrder_.orderId_ != rhs.currentOrder_.orderId_;
+        return this->currentOrder_.OrderId() != rhs.currentOrder_.OrderId();
     }
 
 };
@@ -109,7 +109,7 @@ public:
             Order currentOrder = entryPtr->CurrentOrder();
             if (currentOrder.CurrentQuantity() != 0) {
                 orderRecords.push_back(OrderStruct{
-                    currentOrder.orderId_,
+                    currentOrder.OrderId(),
                     currentOrder.CurrentQuantity(),
                     currentOrder.Price(),
                     currentOrder.IsBuy(),
