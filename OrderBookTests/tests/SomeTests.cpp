@@ -75,7 +75,7 @@ TEST(OrderBookTests, CanGetBidAskSpread) {
     book.AddOrder(buyOrder2);
     book.AddOrder(sellOrder1);
     book.AddOrder(sellOrder2);
-    EXPECT_EQ(book.GetSpread().Spread().value(), 50-48);
+    EXPECT_EQ(book.GetSpread().Spread().value(), 50 - 48);
     EXPECT_EQ(book.Count(), 4);
 }
 

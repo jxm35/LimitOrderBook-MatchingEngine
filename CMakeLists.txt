@@ -10,9 +10,9 @@ set(BOOST_LIBRARY_DIR /opt/homebrew/Cellar/boost/1.82.0_1/lib)
 
 find_package(Boost 1.82.0 COMPONENTS REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
-if(NOT Boost_FOUND)
+if (NOT Boost_FOUND)
     message(FATAL_ERROR "Could not find boost!")
-endif()
+endif ()
 
 
 # Spdlog / Fmt setup

@@ -19,6 +19,7 @@ public:
         bid_ = bid;
         ask_ = ask;
     }
+
     boost::optional<long> Spread() {
         if (bid_.has_value() && ask_.has_value()) {
             return ask_.value() - bid_.value();
@@ -29,60 +30,80 @@ public:
 
 class IReadOnlyOrderBook {
 public:
-    virtual ~IReadOnlyOrderBook() { }
+    virtual ~IReadOnlyOrderBook() {}
+
     virtual bool ContainsOrder(long orderId) = 0;
+
     virtual OrderBookSpread GetSpread() = 0;
+
     virtual int Count() = 0;
 };
 
-class IOrderEntryOrderBook: IReadOnlyOrderBook {
+class IOrderEntryOrderBook : IReadOnlyOrderBook {
 public:
-    virtual ~IOrderEntryOrderBook() { }
+    virtual ~IOrderEntryOrderBook() {}
+
     virtual void AddOrder(Order order) = 0;
+
     virtual void ChangeOrder(ModifyOrder modifyOrder) = 0;
+
     virtual void RemoveOrder(CancelOrder cancelOrder) = 0;
 //    cancel all
 };
 
-class IRetrievalEntryOrderBook: IOrderEntryOrderBook {
+class IRetrievalEntryOrderBook : IOrderEntryOrderBook {
 public:
-    virtual ~IRetrievalEntryOrderBook() { }
+    virtual ~IRetrievalEntryOrderBook() {}
+
     virtual std::list<OrderBookEntry> GetAskOrders() = 0;
+
     virtual std::list<OrderBookEntry> GetBidOrders() = 0;
 
 };
 
-class IMatchingOrderBook: IRetrievalEntryOrderBook {
+class IMatchingOrderBook : IRetrievalEntryOrderBook {
 public:
-    virtual ~IMatchingOrderBook() { }
+    virtual ~IMatchingOrderBook() {}
+
     virtual MatchResult Match() = 0;
 
 };
 
-class OrderBook: IRetrievalEntryOrderBook {
+class OrderBook : IRetrievalEntryOrderBook {
 private:
     Security instrument_;
 
     // sorted maps
-    std::map<long, Limit*, std::less<>> askLimits_;
-    std::map<long, Limit*, std::greater<>> bidLimits_;
+    std::map<long, Limit *, std::less<>> askLimits_;
+    std::map<long, Limit *, std::greater<>> bidLimits_;
 
     // dictionary
     std::unordered_map<long, OrderBookEntry> orders_;
 
-    template <typename sort>
-    static void AddOrder(Order order, long price, std::map<long, Limit*, sort>& limitLevels, std::unordered_map<long, OrderBookEntry>& internalOrderBook);
-    static void RemoveOrderInner(long orderId, OrderBookEntry *obe, std::unordered_map<long, OrderBookEntry>& internalOrderBook);
+    template<typename sort>
+    static void AddOrder(Order order, long price, std::map<long, Limit *, sort> &limitLevels,
+                         std::unordered_map<long, OrderBookEntry> &internalOrderBook);
+
+    static void
+    RemoveOrderInner(long orderId, OrderBookEntry *obe, std::unordered_map<long, OrderBookEntry> &internalOrderBook);
 
 public:
     OrderBook(Security instrument);
+
     int Count();
+
     bool ContainsOrder(long orderId);
+
     OrderBookSpread GetSpread();
+
     void AddOrder(Order order);
+
     void ChangeOrder(ModifyOrder modifyOrder);
-    void RemoveOrder(CancelOrder cancelOrder) ;
+
+    void RemoveOrder(CancelOrder cancelOrder);
+
     std::list<OrderBookEntry> GetAskOrders();
+
     std::list<OrderBookEntry> GetBidOrders();
 
 };

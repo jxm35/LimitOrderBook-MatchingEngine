@@ -7,6 +7,7 @@
 #include "order.h"
 
 class Limit;
+
 class OrderBookEntry;
 
 class OrderBookEntry {
@@ -17,23 +18,28 @@ private:
 public:
     OrderBookEntry *next;
     OrderBookEntry *previous;
+
     OrderBookEntry(class Limit *parentLimit, Order currentOrder);
+
     OrderBookEntry() {};  // ToFix
 
     Order CurrentOrder() {
         return currentOrder_;
     }
-    Limit* Limit() {
+
+    Limit *Limit() {
         return limit_;
     }
+
     std::time_t CreationTime() {
         return creationTime_;
     }
 
-    bool operator== (const OrderBookEntry &rhs) {
+    bool operator==(const OrderBookEntry &rhs) {
         return this->currentOrder_.OrderId() == rhs.currentOrder_.OrderId();
     }
-    bool operator!= (const OrderBookEntry &rhs) {
+
+    bool operator!=(const OrderBookEntry &rhs) {
         return this->currentOrder_.OrderId() != rhs.currentOrder_.OrderId();
     }
 
@@ -62,6 +68,7 @@ private:
 
 public:
     Limit(long price);
+
     // mutable to allow us to change these in a logically const Limit (in a set)
     OrderBookEntry mutable *head_;
     OrderBookEntry mutable *tail_;
@@ -69,9 +76,11 @@ public:
     bool IsEmpty() const {
         return head_ == nullptr && tail_ == nullptr;
     }
+
     long Price() const {
         return price_;
     }
+
     Side Side() {
         if (IsEmpty())
             return Side::Unknown;
@@ -81,6 +90,7 @@ public:
             return Side::Ask;
         }
     }
+
     uint16_t GetOrderCount() {
         uint16_t orderCount = 0;
         OrderBookEntry *entryPtr = head_;
@@ -92,6 +102,7 @@ public:
         }
         return orderCount;
     }
+
     uint16_t GetOrderQuantity() {
         uint16_t orderQuantity = 0;
         OrderBookEntry *entryPtr = head_;
@@ -101,6 +112,7 @@ public:
         }
         return orderQuantity;
     }
+
     std::list<OrderStruct> GetOrderRecords() {
         std::list<OrderStruct> orderRecords;
         OrderBookEntry *entryPtr = head_;
@@ -109,13 +121,13 @@ public:
             Order currentOrder = entryPtr->CurrentOrder();
             if (currentOrder.CurrentQuantity() != 0) {
                 orderRecords.push_back(OrderStruct{
-                    currentOrder.OrderId(),
-                    currentOrder.CurrentQuantity(),
-                    currentOrder.Price(),
-                    currentOrder.IsBuy(),
-                    currentOrder.Username(),
-                    currentOrder.SecurityID(),
-                    queuePosition,
+                        currentOrder.OrderId(),
+                        currentOrder.CurrentQuantity(),
+                        currentOrder.Price(),
+                        currentOrder.IsBuy(),
+                        currentOrder.Username(),
+                        currentOrder.SecurityID(),
+                        queuePosition,
                 });
                 queuePosition++;
                 entryPtr = entryPtr->next;
@@ -134,13 +146,14 @@ public:
 //    }
 //};
 struct SortAsks {
-    bool operator () (const Limit &f, const Limit &s) const {
+    bool operator()(const Limit &f, const Limit &s) const {
         return f.Price() < s.Price();
 //        return f.price < s.price;
     }
 };
+
 struct SortBids {
-    bool operator () (const Limit &f, const Limit &s) const {
+    bool operator()(const Limit &f, const Limit &s) const {
         return f.Price() > s.Price();
     }
 };

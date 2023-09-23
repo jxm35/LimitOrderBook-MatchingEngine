@@ -3,9 +3,9 @@
 
 OrderBook::OrderBook(Security instrument) {
     instrument_ = instrument;
-    askLimits_ = std::map<long, Limit*, std::less<>>();
-    bidLimits_ = std::map<long, Limit*, std::greater<>>();
-    orders_ = std::unordered_map<long, OrderBookEntry >();
+    askLimits_ = std::map<long, Limit *, std::less<>>();
+    bidLimits_ = std::map<long, Limit *, std::greater<>>();
+    orders_ = std::unordered_map<long, OrderBookEntry>();
 }
 
 int OrderBook::Count() {
@@ -30,8 +30,8 @@ OrderBookSpread OrderBook::GetSpread() {
 
 void OrderBook::AddOrder(Order order) {
     order.IsBuy() ?
-    AddOrder(order, order.Price(),  bidLimits_ , orders_)
-    : AddOrder(order, order.Price(),  askLimits_, orders_);
+    AddOrder(order, order.Price(), bidLimits_, orders_)
+                  : AddOrder(order, order.Price(), askLimits_, orders_);
 }
 
 void OrderBook::ChangeOrder(ModifyOrder modifyOrder) {
@@ -39,8 +39,9 @@ void OrderBook::ChangeOrder(ModifyOrder modifyOrder) {
         OrderBookEntry obe = orders_.at(modifyOrder.OrderId());
         RemoveOrder(modifyOrder.ToCancelOrder());
         obe.CurrentOrder().IsBuy() ?
-        AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(),  bidLimits_ , orders_)
-        : AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(),  askLimits_, orders_);
+        AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(), bidLimits_, orders_)
+                                   : AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(), askLimits_,
+                                              orders_);
     }
 
 }
@@ -56,7 +57,7 @@ void OrderBook::RemoveOrder(CancelOrder cancelOrder) {
 
 std::list<OrderBookEntry> OrderBook::GetAskOrders() {
     std::list<OrderBookEntry> orderBookEntries;
-    for(const auto & askLimit : askLimits_) {
+    for (const auto &askLimit: askLimits_) {
         if (askLimit.second->IsEmpty()) {
             continue;
         }
@@ -71,7 +72,7 @@ std::list<OrderBookEntry> OrderBook::GetAskOrders() {
 
 std::list<OrderBookEntry> OrderBook::GetBidOrders() {
     std::list<OrderBookEntry> orderBookEntries;
-    for(const auto & bidLimit : bidLimits_) {
+    for (const auto &bidLimit: bidLimits_) {
         if (bidLimit.second->IsEmpty()) {
             continue;
         }
@@ -84,9 +85,9 @@ std::list<OrderBookEntry> OrderBook::GetBidOrders() {
     return orderBookEntries;
 }
 
-template <typename sort>
-void OrderBook::AddOrder(Order order,long price, std::map<long, Limit*, sort>& limitLevels,
-                              std::unordered_map<long, OrderBookEntry>& internalOrderBook) {
+template<typename sort>
+void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> &limitLevels,
+                         std::unordered_map<long, OrderBookEntry> &internalOrderBook) {
     if (limitLevels.contains(price)) {
         auto lim = limitLevels.find(price);
         if (lim != limitLevels.end()) {
@@ -118,19 +119,20 @@ void OrderBook::AddOrder(Order order,long price, std::map<long, Limit*, sort>& l
 }
 
 void OrderBook::RemoveOrderInner(long orderId, OrderBookEntry *obe,
-                                 std::unordered_map<long, OrderBookEntry>& internalOrderBook) {
+                                 std::unordered_map<long, OrderBookEntry> &internalOrderBook) {
     // remove from limit linked list
-    if (obe->previous != nullptr &&obe->next != nullptr) {
+    if (obe->previous != nullptr && obe->next != nullptr) {
         obe->next->previous = obe->previous;
         obe->previous->next = obe->next;
     } else if (obe->previous != nullptr) {
         obe->previous->next = nullptr;
-    } else if (obe->next != nullptr){
+    } else if (obe->next != nullptr) {
         obe->next->previous = nullptr;
     }
 
     // remove from limit obj
-    if (obe->Limit()->head_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId() && obe->Limit()->tail_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
+    if (obe->Limit()->head_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId() &&
+        obe->Limit()->tail_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
         obe->Limit()->head_ = nullptr;
         obe->Limit()->tail_ = nullptr;
     } else if (obe->Limit()->head_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {

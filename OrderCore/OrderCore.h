@@ -12,14 +12,17 @@ private:
 
 public:
     OrderCore(std::string username, int securityId);
+
     OrderCore(long orderId, std::string username, int securityId);
 
     inline long OrderId() const {
         return orderId_;
     };
+
     inline std::string Username() const {
         return username_;
     }
+
     inline int SecurityID() const {
         return securityId_;
     }

@@ -4,10 +4,11 @@
 #include "CancelOrder.h"
 
 class Order;
+
 class ModifyOrder;
 
 
-class Order: public OrderCore {
+class Order : public OrderCore {
 private:
     long price_;
     uint16_t initialQuantity_;
@@ -19,29 +20,34 @@ public:
           uint32_t quantity, bool isBuy);
 
 
-    Order(const ModifyOrder& modifyOrder);
-    Order(): OrderCore(-1, "invalid", -1) {}; // ToFix
+    Order(const ModifyOrder &modifyOrder);
+
+    Order() : OrderCore(-1, "invalid", -1) {}; // ToFix
 
     inline long Price() const {
         return price_;
     }
-    inline uint16_t  InitialQuantity() const {
+
+    inline uint16_t InitialQuantity() const {
         return initialQuantity_;
     }
-    inline uint16_t  CurrentQuantity() const {
+
+    inline uint16_t CurrentQuantity() const {
         return currentQuantity_;
     }
+
     inline bool IsBuy() const {
         return isBuy_;
     }
 
     void IncreaseQuantity(uint16_t quantity);
+
     void DecreaseQuantity(uint16_t quantity);
 };
 
 // Modify Order
 
-class ModifyOrder: public OrderCore {
+class ModifyOrder : public OrderCore {
     long price_;
     uint16_t quantity_;
     bool isBuy_;
@@ -52,9 +58,11 @@ public:
     inline long Price() const {
         return price_;
     }
+
     inline uint16_t Quantity() const {
         return quantity_;
     }
+
     inline bool IsBuy() const {
         return isBuy_;
     }
