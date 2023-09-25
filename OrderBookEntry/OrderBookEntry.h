@@ -23,11 +23,11 @@ public:
 
     OrderBookEntry() {};  // ToFix
 
-    Order CurrentOrder() {
+    Order CurrentOrder() const {
         return currentOrder_;
     }
 
-    Limit *Limit() {
+    Limit *Limit() const {
         return limit_;
     }
 
@@ -35,13 +35,13 @@ public:
         return creationTime_;
     }
 
-    bool operator==(const OrderBookEntry &rhs) {
-        return this->currentOrder_.OrderId() == rhs.currentOrder_.OrderId();
-    }
-
-    bool operator!=(const OrderBookEntry &rhs) {
-        return this->currentOrder_.OrderId() != rhs.currentOrder_.OrderId();
-    }
+//    bool operator==(const OrderBookEntry &rhs) {
+//        return this->currentOrder_.OrderId() == rhs.currentOrder_.OrderId();
+//    }
+//
+//    bool operator!=(const OrderBookEntry &rhs) {
+//        return this->currentOrder_.OrderId() != rhs.currentOrder_.OrderId();
+//    }
 
 };
 
@@ -65,6 +65,9 @@ struct OrderStruct {
 class Limit {
 private:
     long price_;
+    long size_;
+    // this has been stored as a field so we don't have to traverse a linked list every time we want to check order quantity at a level
+    uint16_t orderQuantity_;
 
 public:
     Limit(long price);
@@ -77,8 +80,16 @@ public:
         return head_ == nullptr && tail_ == nullptr;
     }
 
-    long Price() const {
+    inline long Price() const {
         return price_;
+    }
+
+    void AddOrder(OrderBookEntry *obe);
+
+    void RemoveOrder(long orderId, uint16_t quantity);
+
+    inline void DecreaseQuantity(uint16_t quantity) {
+        orderQuantity_ -= quantity;
     }
 
     Side Side() {
@@ -91,26 +102,30 @@ public:
         }
     }
 
-    uint16_t GetOrderCount() {
-        uint16_t orderCount = 0;
-        OrderBookEntry *entryPtr = head_;
-        while (entryPtr != nullptr) {
-            if (entryPtr->CurrentOrder().CurrentQuantity() != 0) {
-                orderCount++;
-                entryPtr = entryPtr->next;
-            }
-        }
-        return orderCount;
+
+    uint16_t GetOrderCount() const {
+//        uint16_t orderCount = 0;
+//        OrderBookEntry *entryPtr = head_;
+//        while (entryPtr != nullptr) {
+//            if (entryPtr->CurrentOrder().CurrentQuantity() != 0) {
+//                orderCount++;
+//                entryPtr = entryPtr->next;
+//            }
+//        }
+//        return orderCount;
+        return size_;
     }
 
-    uint16_t GetOrderQuantity() {
-        uint16_t orderQuantity = 0;
-        OrderBookEntry *entryPtr = head_;
-        while (entryPtr != nullptr) {
-            orderQuantity += entryPtr->CurrentOrder().CurrentQuantity();
-            entryPtr = entryPtr->next;
-        }
-        return orderQuantity;
+    uint16_t
+    GetOrderQuantity() const {   // JamesFix consider storing this as a field on the limit, so as not to have to repeatedly traverse this list.
+//        uint16_t orderQuantity = 0;
+//        OrderBookEntry *entryPtr = head_;
+//        while (entryPtr != nullptr) {
+//            orderQuantity += entryPtr->CurrentOrder().CurrentQuantity();
+//            entryPtr = entryPtr->next;
+//        }
+//        return orderQuantity;
+        return orderQuantity_;
     }
 
     std::list<OrderStruct> GetOrderRecords() {

@@ -74,18 +74,24 @@ private:
     Security instrument_;
 
     // sorted maps
+    // limits could also be implemented as an array with pointers to the best bid and ask limit.
+    // or a buy and a sell limit array for fast lookup, as most used limits will be near the centre (price wise) (so near the edge of a tree)
     std::map<long, Limit *, std::less<>> askLimits_;
     std::map<long, Limit *, std::greater<>> bidLimits_;
 
     // dictionary
+    // could switch this for an array, with order_id as the index (as we can re start order ids for each day of trading).
+    // This would also allow us to pre-allocate the storage fif we have enough memory to further improve performance. (std::vector)
     std::unordered_map<long, OrderBookEntry> orders_;
+    // could add a map price -> limit to enable efficient finding of orders @ price.
 
     template<typename sort>
     static void AddOrder(Order order, long price, std::map<long, Limit *, sort> &limitLevels,
                          std::unordered_map<long, OrderBookEntry> &internalOrderBook);
 
-    static void
-    RemoveOrderInner(long orderId, OrderBookEntry *obe, std::unordered_map<long, OrderBookEntry> &internalOrderBook);
+    template<typename sort>
+    static void RemoveOrder(long orderId, const OrderBookEntry &obe, std::map<long, Limit *, sort> &limitLevels,
+                            std::unordered_map<long, OrderBookEntry> &internalOrderBook);
 
 public:
     OrderBook(Security instrument);
@@ -96,6 +102,10 @@ public:
 
     OrderBookSpread GetSpread();
 
+    boost::optional<Limit *> GetBestBid();
+
+    boost::optional<Limit *> GetBestAsk();
+
     void AddOrder(Order order);
 
     void ChangeOrder(ModifyOrder modifyOrder);
@@ -105,5 +115,7 @@ public:
     std::list<OrderBookEntry> GetAskOrders();
 
     std::list<OrderBookEntry> GetBidOrders();
+
+    MatchResult Match();
 
 };

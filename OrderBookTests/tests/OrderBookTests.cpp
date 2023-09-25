@@ -110,3 +110,21 @@ TEST(OrderBookTests, CanModifyBids) {
     EXPECT_EQ(bids.begin()->Limit()->GetOrderQuantity(), 15);
     EXPECT_EQ(bids.begin()->CurrentOrder().OrderId(), order1.OrderId());
 }
+
+TEST(OrderBookTests, CanMatch) {
+    const int SECURITY_ID = 1;
+    const std::string USERNAME = "test";
+    Security apl("apple", "AAPL", SECURITY_ID);
+    OrderBook book(apl);
+    Order order1(OrderCore(USERNAME, SECURITY_ID), 50, 20, true);
+    book.AddOrder(order1);
+    ModifyOrder modifyOrder(OrderCore(order1.OrderId(), USERNAME, SECURITY_ID), 50, 15, true);
+    book.ChangeOrder(modifyOrder);
+    EXPECT_EQ(book.Count(), 1);
+    std::list<OrderBookEntry> bids = book.GetBidOrders();
+    EXPECT_EQ(bids.begin()->Limit()->Price(), 50);
+    EXPECT_EQ(bids.begin()->Limit()->IsEmpty(), false);
+    EXPECT_EQ(bids.begin()->Limit()->GetOrderCount(), 1);
+    EXPECT_EQ(bids.begin()->Limit()->GetOrderQuantity(), 15);
+    EXPECT_EQ(bids.begin()->CurrentOrder().OrderId(), order1.OrderId());
+}

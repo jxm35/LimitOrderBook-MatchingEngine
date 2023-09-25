@@ -14,7 +14,7 @@ enable_testing()
 
 add_executable(
         SomeTests
-        tests/SomeTests.cpp
+        tests/OrderBookTests.cpp
 )
 target_link_libraries(
         SomeTests

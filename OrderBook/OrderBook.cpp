@@ -1,3 +1,4 @@
+#include "spdlog/spdlog.h"
 
 #include "OrderBook.h"
 
@@ -20,12 +21,26 @@ OrderBookSpread OrderBook::GetSpread() {
     boost::optional<long> bestAsk = boost::none;
     boost::optional<long> bestBid = boost::none;
     if (!askLimits_.empty() && askLimits_.begin()->second->head_ != nullptr) {
-        bestAsk = askLimits_.begin()->second->Price();
+        bestAsk = askLimits_.begin()->first;
     }
     if (!bidLimits_.empty() && bidLimits_.begin()->second->head_ != nullptr) {
-        bestBid = bidLimits_.begin()->second->Price();
+        bestBid = bidLimits_.begin()->first;
     }
     return OrderBookSpread(bestBid, bestAsk);
+}
+
+boost::optional<Limit *> OrderBook::GetBestBid() {
+    if (bidLimits_.empty()) {
+        return boost::none;
+    }
+    return bidLimits_.begin()->second;
+}
+
+boost::optional<Limit *> OrderBook::GetBestAsk() {
+    if (askLimits_.empty()) {
+        return boost::none;
+    }
+    return askLimits_.begin()->second;
 }
 
 void OrderBook::AddOrder(Order order) {
@@ -49,7 +64,9 @@ void OrderBook::ChangeOrder(ModifyOrder modifyOrder) {
 void OrderBook::RemoveOrder(CancelOrder cancelOrder) {
     if (orders_.contains(cancelOrder.OrderId())) {
         OrderBookEntry obe = orders_.at(cancelOrder.OrderId());
-        RemoveOrderInner(cancelOrder.OrderId(), &obe, orders_);
+        obe.CurrentOrder().IsBuy() ? RemoveOrder(cancelOrder.OrderId(), obe, bidLimits_, orders_)
+                                   : RemoveOrder(cancelOrder.OrderId(), obe, askLimits_, orders_);
+
     } else {
         throw std::invalid_argument("order id not found");
     }
@@ -92,17 +109,18 @@ void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> 
         auto lim = limitLevels.find(price);
         if (lim != limitLevels.end()) {
             OrderBookEntry *orderBookEntry = new OrderBookEntry(lim->second, order);
-            if (lim->second->head_ == nullptr) {
-                // no orders on this level
-                lim->second->head_ = orderBookEntry;
-                lim->second->tail_ = orderBookEntry;
-            } else {
-                // we have orders on this level
-                OrderBookEntry *tailEntry = lim->second->tail_;
-                tailEntry->next = orderBookEntry;
-                orderBookEntry->previous = tailEntry;
-                lim->second->tail_ = orderBookEntry;
-            }
+            lim->second->AddOrder(orderBookEntry);
+//            if (lim->second->head_ == nullptr) {
+//                // no orders on this level
+//                lim->second->head_ = orderBookEntry;
+//                lim->second->tail_ = orderBookEntry;
+//            } else {
+//                // we have orders on this level
+//                OrderBookEntry *tailEntry = lim->second->tail_;
+//                tailEntry->next = orderBookEntry;
+//                orderBookEntry->previous = tailEntry;
+//                lim->second->tail_ = orderBookEntry;
+//            }
             internalOrderBook[order.OrderId()] = *orderBookEntry;
         } else {
             throw "we are supposed to have a limit";
@@ -111,34 +129,82 @@ void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> 
         // level does not exist
         Limit *limit = new Limit(price);
         OrderBookEntry *orderBookEntry = new OrderBookEntry(limit, order);
-        limit->head_ = orderBookEntry;
-        limit->tail_ = orderBookEntry;
+        limit->AddOrder(orderBookEntry);
         limitLevels[price] = limit;
         internalOrderBook[order.OrderId()] = *orderBookEntry;
     }
 }
 
-void OrderBook::RemoveOrderInner(long orderId, OrderBookEntry *obe,
-                                 std::unordered_map<long, OrderBookEntry> &internalOrderBook) {
+template<typename sort>
+void OrderBook::RemoveOrder(long orderId, const OrderBookEntry &obe, std::map<long, Limit *, sort> &limitLevels,
+                            std::unordered_map<long, OrderBookEntry> &internalOrderBook) {
+    if (obe.Limit()->GetOrderCount() == 1) {
+        limitLevels.erase(obe.CurrentOrder().Price());
+        delete (obe.Limit()->head_);
+        delete (obe.Limit());
+        internalOrderBook.erase(orderId);
+        return;
+    }
     // remove from limit linked list
-    if (obe->previous != nullptr && obe->next != nullptr) {
-        obe->next->previous = obe->previous;
-        obe->previous->next = obe->next;
-    } else if (obe->previous != nullptr) {
-        obe->previous->next = nullptr;
-    } else if (obe->next != nullptr) {
-        obe->next->previous = nullptr;
+    if (obe.previous != nullptr && obe.next != nullptr) {
+        obe.next->previous = obe.previous;
+        obe.previous->next = obe.next;
+    } else if (obe.previous != nullptr) {
+        obe.previous->next = nullptr;
+    } else if (obe.next != nullptr) {
+        obe.next->previous = nullptr;
     }
 
     // remove from limit obj
-    if (obe->Limit()->head_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId() &&
-        obe->Limit()->tail_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
-        obe->Limit()->head_ = nullptr;
-        obe->Limit()->tail_ = nullptr;
-    } else if (obe->Limit()->head_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
-        obe->Limit()->head_ = obe->next;
-    } else if (obe->Limit()->tail_->CurrentOrder().OrderId() == obe->CurrentOrder().OrderId()) {
-        obe->Limit()->tail_ = obe->previous;
-    }
+    obe.Limit()->RemoveOrder(obe.CurrentOrder().OrderId(), obe.CurrentOrder().CurrentQuantity());
     internalOrderBook.erase(orderId);
+}
+
+MatchResult OrderBook::Match() {
+    auto bestBid = bidLimits_.begin()->second;
+    auto bestAsk = askLimits_.begin()->second;
+    long bidPrice = bestBid->Price();
+    if (bidPrice >= bestAsk->Price()) {
+        auto bidPtr = bestBid->head_;
+        auto askPtr = bestAsk->head_;
+        while (bidPtr != nullptr && askPtr != nullptr) {
+            if (bidPtr->CurrentOrder().CurrentQuantity() > askPtr->CurrentOrder().CurrentQuantity()) {
+                bidPtr->CurrentOrder().DecreaseQuantity(askPtr->CurrentOrder().CurrentQuantity());
+                bestBid->DecreaseQuantity(askPtr->CurrentOrder().CurrentQuantity());
+                spdlog::info("buy order {} partially filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
+                             bidPrice);
+                spdlog::info("sell order {}  filled @ {} pence", askPtr->CurrentOrder().OrderId(),
+                             bidPrice);
+                auto next = askPtr->next;
+                RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
+                askPtr = next;
+            } else if (bidPtr->CurrentOrder().CurrentQuantity() < askPtr->CurrentOrder().CurrentQuantity()) {
+                askPtr->CurrentOrder().DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
+                bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
+                spdlog::info("sell order {} partially filled @ {} pence", askPtr->CurrentOrder().OrderId(),
+                             bidPrice);
+                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
+                             bidPrice);
+                auto next = bidPtr->next;
+                RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
+                bidPtr = next;
+            } else {
+                spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
+                             bidPrice);
+                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
+                             bidPrice);
+                // remove bidPtr + askPtr
+                auto next = askPtr->next;
+                auto askQuantity = askPtr->CurrentOrder().CurrentQuantity();
+                RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
+//                bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
+                askPtr = next;
+                next = bidPtr->next;
+                RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
+//                bestBid->DecreaseQuantity(askQuantity);
+                bidPtr = next;
+            }
+        }
+    }
+    return MatchResult();
 }
