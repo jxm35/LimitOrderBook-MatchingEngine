@@ -102,9 +102,13 @@ public:
 
     OrderBookSpread GetSpread();
 
-    boost::optional<Limit *> GetBestBid();
+    boost::optional<Limit *> GetBestBidLimit();
 
-    boost::optional<Limit *> GetBestAsk();
+    boost::optional<Limit *> GetBestAskLimit();
+
+    boost::optional<long> GetBestBidPrice();
+
+    boost::optional<long> GetBestAskPrice();
 
     void AddOrder(Order order);
 

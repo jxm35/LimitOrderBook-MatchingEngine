@@ -11,8 +11,8 @@ class ModifyOrder;
 class Order : public OrderCore {
 private:
     long price_;
-    uint16_t initialQuantity_;
-    uint16_t currentQuantity_;
+    uint32_t initialQuantity_;
+    uint32_t currentQuantity_;
     bool isBuy_;
 
 public:
@@ -28,11 +28,11 @@ public:
         return price_;
     }
 
-    inline uint16_t InitialQuantity() const {
+    inline uint32_t InitialQuantity() const {
         return initialQuantity_;
     }
 
-    inline uint16_t CurrentQuantity() const {
+    inline uint32_t CurrentQuantity() const {
         return currentQuantity_;
     }
 
@@ -43,26 +43,24 @@ public:
     friend class OrderBookEntry;
 
 protected:
-    void IncreaseQuantity(uint16_t quantity);
-
-    void DecreaseQuantity(uint16_t quantity);
+    void DecreaseQuantity(uint32_t quantity);
 };
 
 // Modify Order
 
 class ModifyOrder : public OrderCore {
     long price_;
-    uint16_t quantity_;
+    uint32_t quantity_;
     bool isBuy_;
 
 public:
-    ModifyOrder(OrderCore orderCore, long price, uint16_t quantity, bool isBuy);
+    ModifyOrder(OrderCore orderCore, long price, uint32_t quantity, bool isBuy);
 
     inline long Price() const {
         return price_;
     }
 
-    inline uint16_t Quantity() const {
+    inline uint32_t Quantity() const {
         return quantity_;
     }
 

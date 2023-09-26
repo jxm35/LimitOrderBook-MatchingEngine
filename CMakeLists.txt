@@ -51,6 +51,12 @@ add_subdirectory(server)
 add_executable(WebSocketClient client/main.cpp client/session.cpp client/util.cpp)
 target_link_libraries(WebSocketClient PRIVATE)
 
+add_executable(RunOrderBook main.cpp)
+target_link_libraries(RunOrderBook PRIVATE OrderBook)
+
+add_subdirectory(realtime)
+
+
 #add_executable(networking server/main.cpp)
 
 #add_executable(client client/main.cpp)

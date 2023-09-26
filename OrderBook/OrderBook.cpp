@@ -29,18 +29,31 @@ OrderBookSpread OrderBook::GetSpread() {
     return OrderBookSpread(bestBid, bestAsk);
 }
 
-boost::optional<Limit *> OrderBook::GetBestBid() {
+boost::optional<Limit *> OrderBook::GetBestBidLimit() {
     if (bidLimits_.empty()) {
         return boost::none;
     }
     return bidLimits_.begin()->second;
 }
 
-boost::optional<Limit *> OrderBook::GetBestAsk() {
+boost::optional<Limit *> OrderBook::GetBestAskLimit() {
     if (askLimits_.empty()) {
         return boost::none;
     }
     return askLimits_.begin()->second;
+}
+
+boost::optional<long> OrderBook::GetBestBidPrice() {
+    if (bidLimits_.empty()) {
+        return boost::none;
+    }
+    return bidLimits_.begin()->first;
+}
+boost::optional<long> OrderBook::GetBestAskPrice() {
+    if (askLimits_.empty()) {
+        return boost::none;
+    }
+    return askLimits_.begin()->first;
 }
 
 void OrderBook::AddOrder(Order order) {
@@ -123,7 +136,7 @@ void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> 
 //            }
             internalOrderBook[order.OrderId()] = *orderBookEntry;
         } else {
-            throw "we are supposed to have a limit";
+            throw std::invalid_argument("we are supposed to have a limit");
         }
     } else {
         // level does not exist

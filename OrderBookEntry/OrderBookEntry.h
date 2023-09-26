@@ -58,12 +58,12 @@ enum Side {
 
 struct OrderStruct {
     long orderId;
-    uint16_t quantity;
+    uint32_t quantity;
     long price;
     bool isBuySide;
     std::string username;
     int securityId;
-    uint16_t QueuePosition;
+    uint32_t QueuePosition;
 };
 
 class Limit {
@@ -71,7 +71,7 @@ private:
     long price_;
     long size_;
     // this has been stored as a field so we don't have to traverse a linked list every time we want to check order quantity at a level
-    uint16_t orderQuantity_;
+    uint32_t orderQuantity_;
 
 public:
     Limit(long price);
@@ -90,9 +90,11 @@ public:
 
     void AddOrder(OrderBookEntry *obe);
 
-    void RemoveOrder(long orderId, uint16_t quantity);
+    void RemoveOrder(long orderId, uint32_t quantity);
 
-    inline void DecreaseQuantity(uint16_t quantity) {
+    inline void DecreaseQuantity(uint32_t quantity) {
+        if (quantity > orderQuantity_)
+            throw std::invalid_argument("removing too much");
         orderQuantity_ -= quantity;
     }
 
@@ -107,7 +109,7 @@ public:
     }
 
 
-    uint16_t GetOrderCount() const {
+    uint32_t GetOrderCount() const {
 //        uint16_t orderCount = 0;
 //        OrderBookEntry *entryPtr = head_;
 //        while (entryPtr != nullptr) {
@@ -120,7 +122,7 @@ public:
         return size_;
     }
 
-    uint16_t
+    uint32_t
     GetOrderQuantity() const {   // JamesFix consider storing this as a field on the limit, so as not to have to repeatedly traverse this list.
 //        uint16_t orderQuantity = 0;
 //        OrderBookEntry *entryPtr = head_;
@@ -135,7 +137,7 @@ public:
     std::list<OrderStruct> GetOrderRecords() {
         std::list<OrderStruct> orderRecords;
         OrderBookEntry *entryPtr = head_;
-        uint16_t queuePosition = 0;
+        uint32_t queuePosition = 0;
         while (entryPtr != nullptr) {
             Order currentOrder = entryPtr->CurrentOrder();
             if (currentOrder.CurrentQuantity() != 0) {

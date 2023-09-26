@@ -16,11 +16,7 @@ Order::Order(const ModifyOrder &modifyOrder) : OrderCore(modifyOrder) {
     isBuy_ = modifyOrder.IsBuy();
 }
 
-void Order::IncreaseQuantity(uint16_t quantity) {
-    currentQuantity_ += quantity;
-}
-
-void Order::DecreaseQuantity(uint16_t quantity) {
+void Order::DecreaseQuantity(uint32_t quantity) {
     if (quantity > currentQuantity_)
         throw std::invalid_argument(
                 fmt::format("Quantity decrease greater than current quantity for OrderId: {}", OrderId()));
@@ -31,7 +27,7 @@ void Order::DecreaseQuantity(uint16_t quantity) {
 
 // Modify Order
 
-ModifyOrder::ModifyOrder(OrderCore orderCore, long price, uint16_t quantity, bool isBuy)
+ModifyOrder::ModifyOrder(OrderCore orderCore, long price, uint32_t quantity, bool isBuy)
         : OrderCore(orderCore) {
     price_ = price;
     quantity_ = quantity;

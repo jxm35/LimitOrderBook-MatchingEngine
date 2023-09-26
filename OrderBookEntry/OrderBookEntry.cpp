@@ -30,7 +30,7 @@ void Limit::AddOrder(OrderBookEntry *order) {
     orderQuantity_ += order->CurrentOrder().CurrentQuantity();
 }
 
-void Limit::RemoveOrder(long orderId, uint16_t quantity) {
+void Limit::RemoveOrder(long orderId, uint32_t quantity) {
     if (head_->CurrentOrder().OrderId() == orderId) {
         head_ = head_->next;
     }
