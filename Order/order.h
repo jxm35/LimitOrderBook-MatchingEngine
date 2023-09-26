@@ -40,6 +40,9 @@ public:
         return isBuy_;
     }
 
+    friend class OrderBookEntry;
+
+protected:
     void IncreaseQuantity(uint16_t quantity);
 
     void DecreaseQuantity(uint16_t quantity);

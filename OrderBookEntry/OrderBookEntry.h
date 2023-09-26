@@ -23,6 +23,10 @@ public:
 
     OrderBookEntry() {};  // ToFix
 
+    void DecreaseQuantity(uint16_t quantity) {
+        currentOrder_.DecreaseQuantity(quantity);
+    }
+
     Order CurrentOrder() const {
         return currentOrder_;
     }

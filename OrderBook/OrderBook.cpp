@@ -169,7 +169,7 @@ MatchResult OrderBook::Match() {
         auto askPtr = bestAsk->head_;
         while (bidPtr != nullptr && askPtr != nullptr) {
             if (bidPtr->CurrentOrder().CurrentQuantity() > askPtr->CurrentOrder().CurrentQuantity()) {
-                bidPtr->CurrentOrder().DecreaseQuantity(askPtr->CurrentOrder().CurrentQuantity());
+                bidPtr->DecreaseQuantity(askPtr->CurrentOrder().CurrentQuantity());
                 bestBid->DecreaseQuantity(askPtr->CurrentOrder().CurrentQuantity());
                 spdlog::info("buy order {} partially filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
                              bidPrice);
@@ -179,7 +179,7 @@ MatchResult OrderBook::Match() {
                 RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
                 askPtr = next;
             } else if (bidPtr->CurrentOrder().CurrentQuantity() < askPtr->CurrentOrder().CurrentQuantity()) {
-                askPtr->CurrentOrder().DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
+                askPtr->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
                 bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
                 spdlog::info("sell order {} partially filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                              bidPrice);
