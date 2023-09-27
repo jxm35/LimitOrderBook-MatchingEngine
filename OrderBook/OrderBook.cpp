@@ -7,6 +7,7 @@ OrderBook::OrderBook(Security instrument) {
     askLimits_ = std::map<long, Limit *, std::less<>>();
     bidLimits_ = std::map<long, Limit *, std::greater<>>();
     orders_ = std::unordered_map<long, OrderBookEntry>();
+    ordersMatched_ = 0;
 }
 
 int OrderBook::Count() {
@@ -114,6 +115,36 @@ std::list<OrderBookEntry> OrderBook::GetBidOrders() {
     }
     return orderBookEntries;
 }
+std::map<long, uint32_t> OrderBook::GetBidQuantities() {
+    std::map<long, uint32_t> limitQuantities;
+    for (const auto &bidLimit: bidLimits_) {
+        if (bidLimit.second->IsEmpty()) {
+            continue;
+        }
+        limitQuantities[bidLimit.first] = bidLimit.second->GetOrderQuantity();
+    }
+    return limitQuantities;
+}
+std::map<long, uint32_t> OrderBook::GetAskQuantities() {
+    std::map<long, uint32_t> limitQuantities;
+    for (const auto &Limit: askLimits_) {
+        if (Limit.second->IsEmpty()) {
+            continue;
+        }
+        limitQuantities[Limit.first] = Limit.second->GetOrderQuantity();
+    }
+    return limitQuantities;
+}
+
+std::list<OrderStruct> OrderBook::GetOrders() {
+    std::list<OrderStruct> orders;
+    for (const auto &limit: askLimits_) {
+        orders.splice(orders.end(), limit.second->GetOrderRecords());
+    }
+    for (const auto &limit: bidLimits_) {
+        orders.splice(orders.end(), limit.second->GetOrderRecords());
+    }
+}
 
 template<typename sort>
 void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> &limitLevels,
@@ -123,17 +154,6 @@ void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> 
         if (lim != limitLevels.end()) {
             OrderBookEntry *orderBookEntry = new OrderBookEntry(lim->second, order);
             lim->second->AddOrder(orderBookEntry);
-//            if (lim->second->head_ == nullptr) {
-//                // no orders on this level
-//                lim->second->head_ = orderBookEntry;
-//                lim->second->tail_ = orderBookEntry;
-//            } else {
-//                // we have orders on this level
-//                OrderBookEntry *tailEntry = lim->second->tail_;
-//                tailEntry->next = orderBookEntry;
-//                orderBookEntry->previous = tailEntry;
-//                lim->second->tail_ = orderBookEntry;
-//            }
             internalOrderBook[order.OrderId()] = *orderBookEntry;
         } else {
             throw std::invalid_argument("we are supposed to have a limit");
@@ -191,6 +211,7 @@ MatchResult OrderBook::Match() {
                 auto next = askPtr->next;
                 RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
                 askPtr = next;
+                ordersMatched_++;
             } else if (bidPtr->CurrentOrder().CurrentQuantity() < askPtr->CurrentOrder().CurrentQuantity()) {
                 askPtr->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
                 bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
@@ -201,6 +222,7 @@ MatchResult OrderBook::Match() {
                 auto next = bidPtr->next;
                 RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
                 bidPtr = next;
+                ordersMatched_++;
             } else {
                 spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                              bidPrice);
@@ -210,12 +232,11 @@ MatchResult OrderBook::Match() {
                 auto next = askPtr->next;
                 auto askQuantity = askPtr->CurrentOrder().CurrentQuantity();
                 RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
-//                bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
                 askPtr = next;
                 next = bidPtr->next;
                 RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
-//                bestBid->DecreaseQuantity(askQuantity);
                 bidPtr = next;
+                ordersMatched_+=2;
             }
         }
     }

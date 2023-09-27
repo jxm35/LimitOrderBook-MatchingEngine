@@ -73,6 +73,8 @@ class OrderBook : IRetrievalEntryOrderBook {
 private:
     Security instrument_;
 
+    long ordersMatched_;
+
     // sorted maps
     // limits could also be implemented as an array with pointers to the best bid and ask limit.
     // or a buy and a sell limit array for fast lookup, as most used limits will be near the centre (price wise) (so near the edge of a tree)
@@ -119,6 +121,16 @@ public:
     std::list<OrderBookEntry> GetAskOrders();
 
     std::list<OrderBookEntry> GetBidOrders();
+
+    std::map<long, uint32_t> GetBidQuantities();
+
+    std::map<long, uint32_t> GetAskQuantities();
+
+    std::list<OrderStruct> GetOrders();
+
+    long GetOrdersMatched() const {
+        return ordersMatched_;
+    }
 
     MatchResult Match();
 

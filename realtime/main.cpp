@@ -20,8 +20,8 @@ int main(int argc, char *argv[]) {
     QMetaObject::invokeMethod(&book, "startOrderBook");
     QMetaObject::invokeMethod(&book, "startTimer");
 
-    QObject::connect(&book, SIGNAL(dataFetched(std::pair<long, long>)), &w,
-                     SLOT(handleDataFetched(std::pair<long, long>)));
-    
+    QObject::connect(&book, SIGNAL(dataFetched(GraphData)), &w,
+                     SLOT(handleDataFetched(GraphData)));
+
     return a.exec();
 }

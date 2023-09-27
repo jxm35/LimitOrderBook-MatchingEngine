@@ -3,7 +3,22 @@
 
 #include <QObject>
 #include <QTimer>
+#include <map>
 #include "OrderBook.h"
+
+struct GraphData {
+    long bidPrice;
+    long askPrice;
+    std::map<long, uint32_t> bidQuantities;
+    std::map<long, uint32_t> askQuantities;
+    long orders;
+    long spread;
+    long bestBid;
+    long bestAsk;
+    long bestBidDepth;
+    long bestAskDepth;
+    long volume;
+};
 
 class QOrderBook : public QObject {
 Q_OBJECT
@@ -31,7 +46,7 @@ public slots:
 
 signals:
 
-    void dataFetched(std::pair<long, long> data); // Signal to notify the main thread that data is ready
+    void dataFetched(GraphData data); // Signal to notify the main thread that data is ready
 
 
 private:
@@ -39,5 +54,5 @@ private:
     QTimer *dataPollTimer; // QTimer for periodic data polling
     bool running_;
     long lastAsk, lastBid;
-    // Order book data and logic
+    long ordersMatched;
 };
