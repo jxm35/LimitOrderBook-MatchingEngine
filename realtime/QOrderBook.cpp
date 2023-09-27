@@ -25,7 +25,7 @@ void *QOrderBook::threadHelper(void *context) {
 void *QOrderBook::runSimulation() {
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
-    const long MIN_DEVIANCE = 0;
+//    long MIN_DEVIANCE = 0 + rand() % 3;
 
     std::random_device device_random_;
     std::default_random_engine generator_(device_random_());
@@ -33,8 +33,8 @@ void *QOrderBook::runSimulation() {
     std::normal_distribution<> quantityDist(100, 10);
     boolDist(generator_);
 
-    Order firstBid(OrderCore(USERNAME, SECURITY_ID), 499, quantityDist(generator_), true);
-    Order firstAsk(OrderCore(USERNAME, SECURITY_ID), 500, quantityDist(generator_), false);
+    Order firstBid(OrderCore(USERNAME, SECURITY_ID), 497, 5000, true);
+    Order firstAsk(OrderCore(USERNAME, SECURITY_ID), 503, 3000, false);
     book_.AddOrder(firstBid);
     book_.AddOrder(firstAsk);
 
@@ -43,31 +43,47 @@ void *QOrderBook::runSimulation() {
 
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < 2000000; i++) {
+
         usleep(10000); // sleep 10ms
         long bestBid = book_.GetBestBidPrice().get_value_or(lastBid);
         long bestAsk = book_.GetBestAskPrice().get_value_or(lastAsk);
         if (bestAsk < 400 || bestBid < 400 || lastBid < 400 || lastAsk < 400) {
             std::cout << "what";
         }
+        long MIN_DEVIANCE = 1 + rand() % (bestAsk - bestBid);
         double midPrice = (bestAsk + bestBid) / (double) 2;
         // 2 limit orders
-        std::normal_distribution<> priceDist(midPrice, 8);
+        std::normal_distribution<> bidPriceDist((bestBid + midPrice) / 2, 5);
+        std::normal_distribution<> sellPriceDist((bestAsk + midPrice) / 2, 5);
+        double priceDouble = bidPriceDist(generator_);
+        long price = round(priceDouble);
         for (int j = 0; j < 2; j++) {
-            double priceDouble = priceDist(generator_);
-            long price = floor(priceDouble);
-            if (midPrice - price < MIN_DEVIANCE && price - midPrice < MIN_DEVIANCE)
-                continue;
-            if (price > bestAsk) {
+
+            if (midPrice - price < MIN_DEVIANCE && price - midPrice < MIN_DEVIANCE) {
+                bool isBuy = boolDist(generator_);
+                isBuy ? book_.PlaceMarketBuyOrder(quantityDist(generator_) / 2) : book_.PlaceMarketSellOrder(
+                        quantityDist(generator_));
+            } else if (price > bestAsk) {
                 Order ask(OrderCore(USERNAME, SECURITY_ID), price, quantityDist(generator_), false);
                 book_.AddOrder(ask);
-                lastAsk = price - 3;
+                lastAsk = price + 3;
             } else if (price < bestBid) {
                 Order bid(OrderCore(USERNAME, SECURITY_ID), price, quantityDist(generator_), true);
                 book_.AddOrder(bid);
                 lastBid = price - 3;
             } else {
-                // make a market order
+                if (price < midPrice) {
+                    Order bid(OrderCore(USERNAME, SECURITY_ID), price, quantityDist(generator_), true);
+                    book_.AddOrder(bid);
+                    lastBid = price - 3;
+                } else if (price > midPrice) {
+                    Order ask(OrderCore(USERNAME, SECURITY_ID), price, quantityDist(generator_), false);
+                    book_.AddOrder(ask);
+                    lastAsk = price + 3;
+                }
             }
+            priceDouble = sellPriceDist(generator_);
+            price = floor(priceDouble);
         }
         // check for orders to cancel
         if (i > 200) {
@@ -99,9 +115,9 @@ void *QOrderBook::runSimulation() {
 
 
         // market order
-        bool isBuy = boolDist(generator_);
-        Order order(OrderCore(USERNAME, SECURITY_ID), isBuy ? bestAsk : bestBid, quantityDist(generator_), isBuy);
-        book_.AddOrder(order);
+//        bool isBuy = boolDist(generator_);
+//        Order order(OrderCore(USERNAME, SECURITY_ID), isBuy ? bestAsk : bestBid, quantityDist(generator_), isBuy);
+//        book_.AddOrder(order);
 
         book_.Match();
     }
@@ -156,6 +172,6 @@ void QOrderBook::fetchData() {
 
 void QOrderBook::startTimer() {
     std::cout << "timer started " << std::endl;
-    dataPollTimer->start(50); // Poll every 100 milliseconds
+    dataPollTimer->start(16); // Poll every 100 milliseconds
 }
 

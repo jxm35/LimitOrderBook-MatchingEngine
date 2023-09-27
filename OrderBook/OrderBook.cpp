@@ -193,7 +193,98 @@ void OrderBook::RemoveOrder(long orderId, const OrderBookEntry &obe, std::map<lo
     internalOrderBook.erase(orderId);
 }
 
+void OrderBook::PlaceMarketBuyOrder(uint32_t quantity) {
+    std::list<OrderBookEntry *> toRemove;
+    if (askLimits_.empty()) {
+        return;
+    }
+        for(std::pair<long, Limit*> limit: askLimits_) {
+            auto askPtr = limit.second->head_;
+            while (askPtr != nullptr) {
+                if (quantity == askPtr->CurrentOrder().CurrentQuantity()) {
+                    spdlog::info("market buy order filled @ {} pence", limit.first);
+                    spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
+                                 limit.first);
+                    toRemove.push_back(askPtr);
+                    ordersMatched_++;
+                    quantity=0;
+                    break;
+                } else if (quantity < askPtr->CurrentOrder().CurrentQuantity()) {
+                    askPtr->DecreaseQuantity(quantity);
+                    spdlog::info("market buy order filled @ {} pence", limit.first);
+                    spdlog::info("sell order {} partially filled @ {} pence", askPtr->CurrentOrder().OrderId(),
+                                 limit.first);
+                    ordersMatched_++;
+                    quantity=0;
+                    break;
+                } else {
+                    quantity -= askPtr->CurrentOrder().CurrentQuantity();
+                    spdlog::info("market buy order partially filled @ {} pence", limit.first);
+                    spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
+                                 limit.first);
+                    toRemove.push_back(askPtr);
+                    ordersMatched_++;
+                    askPtr = askPtr->next;
+                }
+
+            }
+            if (askLimits_.empty() || quantity == 0) {
+                break;
+            }
+        }
+    for(auto obe: toRemove) {
+        RemoveOrder(obe->CurrentOrder().OrderId(), *obe, askLimits_, orders_);
+    }
+}
+
+void OrderBook::PlaceMarketSellOrder(uint32_t quantity) {
+    std::list<OrderBookEntry *> toRemove;
+    if (bidLimits_.empty()) {
+        return;
+    }
+    for(std::pair<long, Limit*> limit: bidLimits_) {
+        auto bidPtr = limit.second->head_;
+        while (bidPtr != nullptr) {
+            if (quantity == bidPtr->CurrentOrder().CurrentQuantity()) {
+                spdlog::info("market sell order filled @ {} pence", limit.first);
+                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
+                             limit.first);
+                toRemove.push_back(bidPtr);
+                ordersMatched_++;
+                quantity=0;
+                break;
+            } else if (quantity < bidPtr->CurrentOrder().CurrentQuantity()) {
+                bidPtr->DecreaseQuantity(quantity);
+                spdlog::info("market sell order filled @ {} pence", limit.first);
+                spdlog::info("buy order {} partially filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
+                             limit.first);
+                ordersMatched_++;
+                quantity = 0;
+                break;
+            } else {
+                quantity -= bidPtr->CurrentOrder().CurrentQuantity();
+                spdlog::info("market sell order partially filled @ {} pence", limit.first);
+                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
+                             limit.first);
+                toRemove.push_back(bidPtr);
+                ordersMatched_++;
+                bidPtr = bidPtr->next;
+            }
+
+        }
+        if (bidLimits_.empty() || quantity == 0) {
+            break;
+        }
+    }
+    for(auto obe: toRemove) {
+        RemoveOrder(obe->CurrentOrder().OrderId(), *obe, bidLimits_, orders_);
+    }
+}
+
 MatchResult OrderBook::Match() {
+    if (bidLimits_.empty() || askLimits_.empty()) {
+        return MatchResult();
+    }
     auto bestBid = bidLimits_.begin()->second;
     auto bestAsk = askLimits_.begin()->second;
     long bidPrice = bestBid->Price();

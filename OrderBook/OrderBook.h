@@ -112,6 +112,10 @@ public:
 
     boost::optional<long> GetBestAskPrice();
 
+    void PlaceMarketBuyOrder(uint32_t quantity);
+
+    void PlaceMarketSellOrder(uint32_t quantity);
+
     void AddOrder(Order order);
 
     void ChangeOrder(ModifyOrder modifyOrder);
