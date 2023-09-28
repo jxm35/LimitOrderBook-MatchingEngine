@@ -55,7 +55,11 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_bx_sell_clicked() {
-    std::cout << "wazzup" << std::endl;
+    emit applySellPressure();
+}
+
+void MainWindow::on_bx_buy_clicked() {
+    emit applyBuyPressure();
 }
 
 void MainWindow::handleDataFetched(GraphData data) {
@@ -69,13 +73,13 @@ void MainWindow::handleDataFetched(GraphData data) {
     double bidSum = 0, askSum, count = 0;
     auto bidPlotData = ui->price_graph->graph(0)->data();
     auto askPlotData = ui->price_graph->graph(1)->data();
-    for (int i = 0; i < bidPlotData->size(); ++i) {
+    for (int i = bidPlotData->size() - 1; i > 0; --i) {
         bidSum += bidPlotData->at(i)->value;
         askSum += askPlotData->at(i)->value;
         count++;
-//        if (i > 200) {
-//            break;
-//        }
+        if (count > 300) {
+            break;
+        }
     }
     double bidAvg = bidSum / count;
     double askAvg = askSum / count;

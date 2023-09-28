@@ -4,6 +4,7 @@
 #include <list>
 #include <unordered_map>
 #include <map>
+#include <mutex>
 
 #include "order.h"
 #include "OrderBookEntry.h"

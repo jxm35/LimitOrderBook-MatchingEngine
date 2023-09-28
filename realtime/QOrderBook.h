@@ -26,10 +26,6 @@ Q_OBJECT
 public:
     explicit QOrderBook(Security sec);
 
-    void *runSimulation();
-
-    static void *threadHelper(void *context);
-
 
 public slots:
 
@@ -38,6 +34,10 @@ public slots:
     void fetchData(); // Slot to fetch data from the order book
 
     void startOrderBook();
+
+    void handleSellButton();
+
+    void handleBuyButton();
 
 
     void stopOrderBook();
@@ -50,6 +50,19 @@ signals:
 
 
 private:
+    static void *simulationHelper(void *context);
+
+    void *runSimulation();
+
+    static void *sellHelper(void *context);
+
+    void *applySellPressure();
+
+    static void *buyHelper(void *context);
+
+    void *applyBuyPressure();
+
+    std::mutex mutex;
     OrderBook book_;
     QTimer *dataPollTimer; // QTimer for periodic data polling
     bool running_;

@@ -23,7 +23,15 @@ private slots:
 
     void on_bx_sell_clicked();
 
+    void on_bx_buy_clicked();
+
     void handleDataFetched(GraphData data); // Slot to handle fetched data
+
+signals:
+
+    void applySellPressure();
+
+    void applyBuyPressure();
 
 
 private:
