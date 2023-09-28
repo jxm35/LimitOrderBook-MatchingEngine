@@ -23,6 +23,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->price_graph->xAxis->setTicker(timeTicker);
     ui->price_graph->axisRect()->setupFullAxesBox();
     ui->price_graph->yAxis->setRange(490, 510);
+    ui->price_graph->xAxis->setLabel("Time Elapsed (hh:mm:ss)");
+    ui->price_graph->yAxis->setLabel("Price (pence)");
 
     // make left and bottom axes transfer their ranges to right and top axes:
     connect(ui->price_graph->xAxis, SIGNAL(rangeChanged(QCPRange)), ui->price_graph->xAxis2, SLOT(setRange(QCPRange)));
@@ -35,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent)
     volumeBars->setWidth(0.05);
     volumeBars->setPen(Qt::NoPen);
     volumeBars->setBrush(blue);
+    ui->volume->xAxis->setLabel("Time Elapsed (hh:mm:ss)");
+    ui->volume->yAxis->setLabel("Volume");
 
 
     // level depth bar chart
@@ -48,6 +52,8 @@ MainWindow::MainWindow(QWidget *parent)
     askLimits->setPen(Qt::NoPen);
     askLimits->setBrush(red);
     ui->heatmap->yAxis->setRange(490, 510);
+    ui->heatmap->xAxis->setLabel("Number Of Contracts");
+    ui->heatmap->yAxis->setLabel("Price Level (pence)");
 }
 
 MainWindow::~MainWindow() {

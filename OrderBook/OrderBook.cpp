@@ -206,7 +206,7 @@ void OrderBook::PlaceMarketBuyOrder(uint32_t quantity) {
                     spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                                  limit.first);
                     toRemove.push_back(askPtr);
-                    ordersMatched_++;
+                    ordersMatched_+=quantity;
                     quantity=0;
                     break;
                 } else if (quantity < askPtr->CurrentOrder().CurrentQuantity()) {
@@ -214,7 +214,7 @@ void OrderBook::PlaceMarketBuyOrder(uint32_t quantity) {
                     spdlog::info("market buy order filled @ {} pence", limit.first);
                     spdlog::info("sell order {} partially filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                                  limit.first);
-                    ordersMatched_++;
+                    ordersMatched_+=quantity;
                     quantity=0;
                     break;
                 } else {
@@ -223,7 +223,7 @@ void OrderBook::PlaceMarketBuyOrder(uint32_t quantity) {
                     spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                                  limit.first);
                     toRemove.push_back(askPtr);
-                    ordersMatched_++;
+                    ordersMatched_+=askPtr->CurrentOrder().CurrentQuantity();
                     askPtr = askPtr->next;
                 }
 
@@ -250,7 +250,7 @@ void OrderBook::PlaceMarketSellOrder(uint32_t quantity) {
                 spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
                              limit.first);
                 toRemove.push_back(bidPtr);
-                ordersMatched_++;
+                ordersMatched_+=quantity;
                 quantity=0;
                 break;
             } else if (quantity < bidPtr->CurrentOrder().CurrentQuantity()) {
@@ -258,7 +258,7 @@ void OrderBook::PlaceMarketSellOrder(uint32_t quantity) {
                 spdlog::info("market sell order filled @ {} pence", limit.first);
                 spdlog::info("buy order {} partially filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
                              limit.first);
-                ordersMatched_++;
+                ordersMatched_+=quantity;
                 quantity = 0;
                 break;
             } else {
@@ -267,7 +267,7 @@ void OrderBook::PlaceMarketSellOrder(uint32_t quantity) {
                 spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
                              limit.first);
                 toRemove.push_back(bidPtr);
-                ordersMatched_++;
+                ordersMatched_+= bidPtr->CurrentOrder().CurrentQuantity();
                 bidPtr = bidPtr->next;
             }
 
@@ -299,10 +299,10 @@ MatchResult OrderBook::Match() {
                              bidPrice);
                 spdlog::info("sell order {}  filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                              bidPrice);
+                ordersMatched_+=askPtr->CurrentOrder().CurrentQuantity();
                 auto next = askPtr->next;
                 RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
                 askPtr = next;
-                ordersMatched_++;
             } else if (bidPtr->CurrentOrder().CurrentQuantity() < askPtr->CurrentOrder().CurrentQuantity()) {
                 askPtr->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
                 bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
@@ -310,24 +310,23 @@ MatchResult OrderBook::Match() {
                              bidPrice);
                 spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
                              bidPrice);
+                ordersMatched_+=bidPtr->CurrentOrder().CurrentQuantity();
                 auto next = bidPtr->next;
                 RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
                 bidPtr = next;
-                ordersMatched_++;
             } else {
                 spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                              bidPrice);
                 spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
                              bidPrice);
-                // remove bidPtr + askPtr
+                // remove bidPtr + askPtr;
+                ordersMatched_+=askPtr->CurrentOrder().CurrentQuantity();
                 auto next = askPtr->next;
-                auto askQuantity = askPtr->CurrentOrder().CurrentQuantity();
                 RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
                 askPtr = next;
                 next = bidPtr->next;
                 RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
                 bidPtr = next;
-                ordersMatched_+=2;
             }
         }
     }

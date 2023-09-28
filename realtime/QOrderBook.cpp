@@ -204,9 +204,6 @@ void QOrderBook::fetchData() {
     std::lock_guard<std::mutex> lock(mutex);
     long bestBid = book_.GetBestBidPrice().get_value_or(lastBid);
     long bestAsk = book_.GetBestAskPrice().get_value_or(lastAsk);
-    if (bestAsk < 400 || bestBid < 400 || lastBid < 400 || lastAsk < 400) {
-        std::cout << "what";
-    }
     auto bidLimit = book_.GetBestBidLimit();
     long bestBidDepth = 0;
     if (bidLimit.has_value()) {

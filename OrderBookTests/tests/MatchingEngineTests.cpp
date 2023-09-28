@@ -144,7 +144,7 @@ TEST(OrderBookTests, TestRandSimluation) {
         std::normal_distribution<> priceDist(midPrice, 8);
         for (int j = 0; j < 2; j++) {
             double priceDouble = priceDist(generator_);
-            long price = floor(priceDouble);
+            long price = round(priceDouble);
             if (midPrice - price < MIN_DEVIANCE && price - midPrice < MIN_DEVIANCE)
                 continue;
             if (price > bestAsk) {
