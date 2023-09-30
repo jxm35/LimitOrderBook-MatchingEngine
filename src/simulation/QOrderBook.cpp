@@ -45,7 +45,6 @@ void *QOrderBook::simulationHelper(void *context) {
 void *QOrderBook::runSimulation() {
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
-//    long MIN_DEVIANCE = 0 + rand() % 3;
 
     std::random_device device_random_;
     std::default_random_engine generator_(device_random_());

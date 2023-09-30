@@ -1,4 +1,3 @@
-add_subdirectory(Limit)
 add_subdirectory(MatchResult)
 add_subdirectory(Order)
 add_subdirectory(OrderBook)

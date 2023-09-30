@@ -8,6 +8,7 @@
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent), ui(new Ui::MainWindow) {
+    this->setWindowTitle("Order Book + matching engine simulation");
     timer.start();
     QColor green(10, 140, 70, 160), red(255, 40, 40), blue(40, 40, 255);
     ui->setupUi(this);

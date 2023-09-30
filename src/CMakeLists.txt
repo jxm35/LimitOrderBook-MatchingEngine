@@ -1,3 +1,3 @@
 add_subdirectory(client)
 add_subdirectory(server)
-add_subdirectory(realtime)
+add_subdirectory(simulation)
