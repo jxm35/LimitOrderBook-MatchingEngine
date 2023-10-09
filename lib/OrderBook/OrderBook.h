@@ -29,48 +29,7 @@ public:
     }
 };
 
-class IReadOnlyOrderBook {
-public:
-    virtual ~IReadOnlyOrderBook() {}
-
-    virtual bool ContainsOrder(long orderId) = 0;
-
-    virtual OrderBookSpread GetSpread() = 0;
-
-    virtual int Count() = 0;
-};
-
-class IOrderEntryOrderBook : IReadOnlyOrderBook {
-public:
-    virtual ~IOrderEntryOrderBook() {}
-
-    virtual void AddOrder(Order order) = 0;
-
-    virtual void ChangeOrder(ModifyOrder modifyOrder) = 0;
-
-    virtual void RemoveOrder(CancelOrder cancelOrder) = 0;
-//    cancel all
-};
-
-class IRetrievalEntryOrderBook : IOrderEntryOrderBook {
-public:
-    virtual ~IRetrievalEntryOrderBook() {}
-
-    virtual std::list<OrderBookEntry> GetAskOrders() = 0;
-
-    virtual std::list<OrderBookEntry> GetBidOrders() = 0;
-
-};
-
-class IMatchingOrderBook : IRetrievalEntryOrderBook {
-public:
-    virtual ~IMatchingOrderBook() {}
-
-    virtual MatchResult Match() = 0;
-
-};
-
-class OrderBook : IRetrievalEntryOrderBook {
+class OrderBook {
 private:
     Security instrument_;
 

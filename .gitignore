@@ -1,6 +1,8 @@
 cmake-build-debug
 cmake-build-release
 cmake-build-debug-event-trace
+src/client
+src/server
 .DS_Store
 
 # Prerequisites
