@@ -77,7 +77,7 @@ void MainWindow::handleDataFetched(GraphData data) {
         return;
     ui->price_graph->graph(0)->addData(key, data.bidPrice);
     ui->price_graph->graph(1)->addData(key, data.askPrice);
-    double bidSum = 0, askSum, count = 0;
+    double bidSum = 0, askSum = 0, count = 0;
     auto bidPlotData = ui->price_graph->graph(0)->data();
     auto askPlotData = ui->price_graph->graph(1)->data();
     for (int i = bidPlotData->size() - 1; i > 0; --i) {

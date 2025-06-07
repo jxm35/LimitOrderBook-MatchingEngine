@@ -3,8 +3,10 @@
 #include <random>
 #include "Security.h"
 #include "OrderBook.h"
+#include "spdlog/spdlog.h"
 
 static void BM_PlaceMarketOrder(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     uint64_t i = 0;
@@ -26,6 +28,7 @@ static void BM_PlaceMarketOrder(benchmark::State &state) {
 }
 
 static void BM_PlaceMarketOrderAcross3Bids(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
@@ -49,6 +52,7 @@ static void BM_PlaceMarketOrderAcross3Bids(benchmark::State &state) {
 }
 
 static void BM_Get_Order(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
@@ -71,9 +75,11 @@ static void BM_Get_Order(benchmark::State &state) {
 }
 
 static void BM_Get_Best_Bid(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
+    uint64_t i = 0;
     for (auto _: state) {
         // initialise the book
         OrderBook book(apl);
@@ -86,10 +92,13 @@ static void BM_Get_Best_Bid(benchmark::State &state) {
                 std::chrono::duration_cast<std::chrono::duration<double>>(
                         end - start);
         state.SetIterationTime(elapsed_seconds.count());
+        i++;
     }
+    state.SetItemsProcessed(i);
 }
 
 static void BM_Add_Order_Existing_Limit(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
@@ -112,6 +121,7 @@ static void BM_Add_Order_Existing_Limit(benchmark::State &state) {
 }
 
 static void BM_Add_Order_New_Limit(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
@@ -133,6 +143,7 @@ static void BM_Add_Order_New_Limit(benchmark::State &state) {
 }
 
 static void BM_Remove_Order(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
@@ -155,6 +166,7 @@ static void BM_Remove_Order(benchmark::State &state) {
 }
 
 static void BM_Match_UnCroseed_Orders(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
@@ -179,6 +191,7 @@ static void BM_Match_UnCroseed_Orders(benchmark::State &state) {
 }
 
 static void BM_Match_Croseed_Orders(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
@@ -204,6 +217,7 @@ static void BM_Match_Croseed_Orders(benchmark::State &state) {
 }
 
 static void BM_Run_Simulation(benchmark::State &state) {
+    spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);

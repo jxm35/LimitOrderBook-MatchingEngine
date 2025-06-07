@@ -1,4 +1,4 @@
-#include "QOrderbook.h"
+#include "QOrderBook.h"
 #include "Security.h"
 #include <iostream>
 #include <chrono>
@@ -142,6 +142,7 @@ void *QOrderBook::runSimulation() {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Elapsed Time: " << duration.count() << "ms";
+    return nullptr;
 }
 
 void QOrderBook::stopOrderBook() {
@@ -186,6 +187,7 @@ void *QOrderBook::applySellPressure() {
             book_.Match();
         }
     }
+    return nullptr;
 }
 
 void *QOrderBook::applyBuyPressure() {
@@ -197,6 +199,7 @@ void *QOrderBook::applyBuyPressure() {
         std::lock_guard<std::mutex> lock(mutex);
         book_.PlaceMarketBuyOrder(quantityDist(generator_));
     }
+    return nullptr;
 }
 
 void QOrderBook::fetchData() {
