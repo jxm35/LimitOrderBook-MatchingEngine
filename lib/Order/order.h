@@ -16,7 +16,7 @@ private:
     bool isBuy_{};
 
 public:
-    Order(OrderCore orderCore, long price,
+    Order(const OrderCore& orderCore, long price,
           uint32_t quantity, bool isBuy);
 
 
@@ -28,7 +28,7 @@ public:
         return price_;
     }
 
-    inline uint32_t InitialQuantity() const {
+    [[nodiscard]] inline uint32_t InitialQuantity() const {
         return initialQuantity_;
     }
 
@@ -54,7 +54,7 @@ class ModifyOrder : public OrderCore {
     bool isBuy_;
 
 public:
-    ModifyOrder(OrderCore orderCore, long price, uint32_t quantity, bool isBuy);
+    ModifyOrder(const OrderCore& orderCore, long price, uint32_t quantity, bool isBuy);
 
     [[nodiscard]] inline long Price() const {
         return price_;

@@ -19,23 +19,23 @@ public:
     OrderBookEntry *next{};
     OrderBookEntry *previous{};
 
-    OrderBookEntry(class Limit *parentLimit, Order currentOrder);
+    OrderBookEntry(class Limit *parentLimit, const Order &currentOrder);
 
-    OrderBookEntry() {};  // ToFix
+    OrderBookEntry() {};  // ToFix allows use with std::pair
 
     void DecreaseQuantity(uint16_t quantity) {
         currentOrder_.DecreaseQuantity(quantity);
     }
 
-    Order CurrentOrder() const {
+    [[nodiscard]] Order CurrentOrder() const {
         return currentOrder_;
     }
 
-    Limit *Limit() const {
+    [[nodiscard]] Limit *Limit() const {
         return limit_;
     }
 
-    std::time_t CreationTime() {
+    [[nodiscard]] std::time_t CreationTime() const {
         return creationTime_;
     }
 
@@ -74,7 +74,7 @@ private:
     uint32_t orderQuantity_;
 
 public:
-    Limit(long price);
+    explicit Limit(long price);
 
     // mutable to allow us to change these in a logically const Limit (in a set)
     OrderBookEntry mutable *head_;
@@ -98,7 +98,7 @@ public:
         orderQuantity_ -= quantity;
     }
 
-    Side Side() {
+    Side Side() const {
         if (IsEmpty())
             return Side::Unknown;
         if (head_->CurrentOrder().IsBuy()) {
@@ -110,31 +110,14 @@ public:
 
 
     uint32_t GetOrderCount() const {
-//        uint16_t orderCount = 0;
-//        OrderBookEntry *entryPtr = head_;
-//        while (entryPtr != nullptr) {
-//            if (entryPtr->CurrentOrder().CurrentQuantity() != 0) {
-//                orderCount++;
-//                entryPtr = entryPtr->next;
-//            }
-//        }
-//        return orderCount;
         return size_;
     }
 
-    uint32_t
-    GetOrderQuantity() const {   // JamesFix consider storing this as a field on the limit, so as not to have to repeatedly traverse this list.
-//        uint16_t orderQuantity = 0;
-//        OrderBookEntry *entryPtr = head_;
-//        while (entryPtr != nullptr) {
-//            orderQuantity += entryPtr->CurrentOrder().CurrentQuantity();
-//            entryPtr = entryPtr->next;
-//        }
-//        return orderQuantity;
+    uint32_t GetOrderQuantity() const {
         return orderQuantity_;
     }
 
-    std::list<OrderStruct> GetOrderRecords() {
+    std::list<OrderStruct> GetOrderRecords() const {
         std::list<OrderStruct> orderRecords;
         OrderBookEntry *entryPtr = head_;
         uint32_t queuePosition = 0;
@@ -161,15 +144,9 @@ public:
 
 //         orderRecords.sort([](const OrderStruct &f, const OrderStruct &s) { return f.price < s.price; })
 
-//struct SortBids {
-//    bool operator () (const OrderStruct &f, const OrderStruct &s) const {
-//        return f.price > s.price;
-//    }
-//};
 struct SortAsks {
     bool operator()(const Limit &f, const Limit &s) const {
         return f.Price() < s.Price();
-//        return f.price < s.price;
     }
 };
 
@@ -178,12 +155,6 @@ struct SortBids {
         return f.Price() > s.Price();
     }
 };
-//struct SortBids {
-//    bool operator () (const Limit *f, const Limit *s) const {
-//        return f->Price() > s->Price();
-//    }
-//};
-//
 
 
 

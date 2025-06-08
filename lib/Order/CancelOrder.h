@@ -3,9 +3,9 @@
 #include "OrderCore.h"
 
 
-class CancelOrder: public OrderCore {
+class CancelOrder : public OrderCore {
 public:
-    CancelOrder(OrderCore orderCore);
+    CancelOrder(const OrderCore &orderCore);
 
 };
 

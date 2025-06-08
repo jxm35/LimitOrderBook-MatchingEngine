@@ -11,9 +11,9 @@ private:
     int securityId_;
 
 public:
-    OrderCore(std::string username, int securityId);
+    OrderCore(const std::string &username, int securityId);
 
-    OrderCore(long orderId, std::string username, int securityId);
+    OrderCore(long orderId, const std::string &username, int securityId);
 
     [[nodiscard]] inline long OrderId() const {
         return orderId_;

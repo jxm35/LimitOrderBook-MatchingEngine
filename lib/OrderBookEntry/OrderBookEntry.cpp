@@ -1,7 +1,7 @@
 
 #include "OrderBookEntry.h"
 
-OrderBookEntry::OrderBookEntry(class Limit *parentLimit, Order currentOrder)
+OrderBookEntry::OrderBookEntry(class Limit *parentLimit, const Order &currentOrder)
         : currentOrder_(currentOrder) {
     limit_ = parentLimit;
 }

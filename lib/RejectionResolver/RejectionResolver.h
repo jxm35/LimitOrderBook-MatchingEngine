@@ -6,8 +6,7 @@
 
 class RejectionResolver final {
 public:
-    static RejectOrder GenerateOrderRejection(OrderCore rejectedOrder, RejectionReason rejectionReason) {
+    static RejectOrder GenerateOrderRejection(const OrderCore& rejectedOrder, RejectionReason rejectionReason) {
         return {rejectedOrder, rejectionReason};
     }
-
 };

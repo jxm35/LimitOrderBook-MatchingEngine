@@ -8,7 +8,7 @@ private:
     std::string ticker_;
     int securityId_;
 public:
-    Security(std::string name, std::string ticker, int securityId);
+    Security(const std::string &&name, const std::string &&ticker, int securityId);
 
 };
 

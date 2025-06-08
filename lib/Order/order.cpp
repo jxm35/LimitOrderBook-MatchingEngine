@@ -1,7 +1,7 @@
 #include "order.h"
 #include "spdlog/fmt/fmt.h"
 
-Order::Order(OrderCore orderCore, long price, uint32_t quantity, bool isBuy)
+Order::Order(const OrderCore& orderCore, long price, uint32_t quantity, bool isBuy)
         : OrderCore(orderCore) {
     price_ = price;
     initialQuantity_ = quantity;
@@ -27,7 +27,7 @@ void Order::DecreaseQuantity(uint32_t quantity) {
 
 // Modify Order
 
-ModifyOrder::ModifyOrder(OrderCore orderCore, long price, uint32_t quantity, bool isBuy)
+ModifyOrder::ModifyOrder(const OrderCore& orderCore, long price, uint32_t quantity, bool isBuy)
         : OrderCore(orderCore) {
     price_ = price;
     quantity_ = quantity;
@@ -35,7 +35,7 @@ ModifyOrder::ModifyOrder(OrderCore orderCore, long price, uint32_t quantity, boo
 }
 
 CancelOrder ModifyOrder::ToCancelOrder() {
-    return CancelOrder(*this);
+    return {*this};
 }
 
 Order ModifyOrder::ToNewOrder() {

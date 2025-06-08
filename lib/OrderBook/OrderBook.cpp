@@ -2,14 +2,14 @@
 
 #include "OrderBook.h"
 
-OrderBook::OrderBook(Security instrument) : instrument_(instrument) {
+OrderBook::OrderBook(const Security& instrument) : instrument_(instrument) {
     askLimits_ = std::map<long, Limit *, std::less<>>();
     bidLimits_ = std::map<long, Limit *, std::greater<>>();
     orders_ = std::unordered_map<long, OrderBookEntry>();
     ordersMatched_ = 0;
 }
 
-int OrderBook::Count() {
+size_t OrderBook::Count() {
     return orders_.size();
 }
 

@@ -57,9 +57,9 @@ private:
                             std::unordered_map<long, OrderBookEntry> &internalOrderBook);
 
 public:
-    OrderBook(Security instrument);
+    OrderBook(const Security &instrument);
 
-    int Count();
+    size_t Count();
 
     bool ContainsOrder(long orderId);
 

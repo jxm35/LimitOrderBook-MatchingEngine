@@ -1,6 +1,6 @@
 #include "Security.h"
 
-Security::Security(std::string name, std::string ticker, int securityId) {
+Security::Security(const std::string&& name, const std::string&& ticker, int securityId) {
     name_ = name;
     ticker_ = ticker;
     securityId_ = securityId;

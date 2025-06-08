@@ -10,10 +10,10 @@ enum RejectionReason {
 };
 
 
-class RejectOrder: public OrderCore {
+class RejectOrder : public OrderCore {
     RejectionReason rejectionReason_;
 public:
-    RejectOrder(OrderCore rejectedOrder, RejectionReason rejectionReason);
+    RejectOrder(const OrderCore &rejectedOrder, RejectionReason rejectionReason);
 
 };
 

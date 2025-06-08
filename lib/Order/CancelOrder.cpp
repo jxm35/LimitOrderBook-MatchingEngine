@@ -1,7 +1,5 @@
 #include "CancelOrder.h"
 
-#include <utility>
-
-CancelOrder::CancelOrder(OrderCore orderCore): OrderCore(std::move(orderCore)) {
+CancelOrder::CancelOrder(const OrderCore &orderCore) : OrderCore(orderCore) {
 
 }
