@@ -1,4 +1,13 @@
 cmake_minimum_required(VERSION 3.24)
+
+if (EXISTS "/opt/homebrew/opt/llvm/bin/clang++")
+    message(STATUS "Using Homebrew LLVM Clang")
+    set(CMAKE_C_COMPILER /opt/homebrew/opt/llvm/bin/clang CACHE STRING "" FORCE)
+    set(CMAKE_CXX_COMPILER /opt/homebrew/opt/llvm/bin/clang++ CACHE STRING "" FORCE)
+else ()
+    message(STATUS "Using system default compiler")
+endif ()
+
 project(LimitOrderBook)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -23,11 +32,6 @@ endif ()
 set(SPDLOG_ROOT /opt/homebrew/Cellar/spdlog/1.12.0)
 find_package(spdlog REQUIRED)
 include_directories(/opt/homebrew/Cellar/spdlog/1.12.0/include)
-
-# fmt setup
-set(FMT_ROOT /opt/homebrew/Cellar/fmt/10.1.1)
-find_package(fmt REQUIRED)
-include_directories(/opt/homebrew/Cellar/fmt/10.1.1/include)
 
 add_subdirectory(lib)
 add_subdirectory(src)

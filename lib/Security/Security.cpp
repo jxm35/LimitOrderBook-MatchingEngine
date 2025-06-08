@@ -6,7 +6,3 @@ Security::Security(std::string name, std::string ticker, int securityId) {
     securityId_ = securityId;
 
 }
-
-Security::Security() {
-
-}

@@ -14,10 +14,10 @@ class OrderBookEntry {
 private:
     Order currentOrder_;
     Limit *limit_;
-    std::time_t creationTime_;
+    std::time_t creationTime_{};
 public:
-    OrderBookEntry *next;
-    OrderBookEntry *previous;
+    OrderBookEntry *next{};
+    OrderBookEntry *previous{};
 
     OrderBookEntry(class Limit *parentLimit, Order currentOrder);
 

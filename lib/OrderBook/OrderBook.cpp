@@ -2,8 +2,7 @@
 
 #include "OrderBook.h"
 
-OrderBook::OrderBook(Security instrument) {
-    instrument_ = instrument;
+OrderBook::OrderBook(Security instrument) : instrument_(instrument) {
     askLimits_ = std::map<long, Limit *, std::less<>>();
     bidLimits_ = std::map<long, Limit *, std::greater<>>();
     orders_ = std::unordered_map<long, OrderBookEntry>();
@@ -27,7 +26,7 @@ OrderBookSpread OrderBook::GetSpread() {
     if (!bidLimits_.empty() && bidLimits_.begin()->second->head_ != nullptr) {
         bestBid = bidLimits_.begin()->first;
     }
-    return OrderBookSpread(bestBid, bestAsk);
+    return {bestBid, bestAsk};
 }
 
 boost::optional<Limit *> OrderBook::GetBestBidLimit() {
@@ -58,7 +57,7 @@ boost::optional<long> OrderBook::GetBestAskPrice() {
     return askLimits_.begin()->first;
 }
 
-void OrderBook::AddOrder(Order order) {
+void OrderBook::AddOrder(const Order &order) {
     order.IsBuy() ?
     AddOrder(order, order.Price(), bidLimits_, orders_)
                   : AddOrder(order, order.Price(), askLimits_, orders_);
@@ -76,7 +75,7 @@ void OrderBook::ChangeOrder(ModifyOrder modifyOrder) {
 
 }
 
-void OrderBook::RemoveOrder(CancelOrder cancelOrder) {
+void OrderBook::RemoveOrder(const CancelOrder &cancelOrder) {
     if (orders_.contains(cancelOrder.OrderId())) {
         OrderBookEntry obe = orders_.at(cancelOrder.OrderId());
         obe.CurrentOrder().IsBuy() ? RemoveOrder(cancelOrder.OrderId(), obe, bidLimits_, orders_)
@@ -156,7 +155,7 @@ void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> 
     if (limitLevels.contains(price)) {
         auto lim = limitLevels.find(price);
         if (lim != limitLevels.end()) {
-            OrderBookEntry *orderBookEntry = new OrderBookEntry(lim->second, order);
+            auto *orderBookEntry = new OrderBookEntry(lim->second, order);
             lim->second->AddOrder(orderBookEntry);
             internalOrderBook[order.OrderId()] = *orderBookEntry;
         } else {
@@ -164,8 +163,8 @@ void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> 
         }
     } else {
         // level does not exist
-        Limit *limit = new Limit(price);
-        OrderBookEntry *orderBookEntry = new OrderBookEntry(limit, order);
+        auto *limit = new Limit(price);
+        auto *orderBookEntry = new OrderBookEntry(limit, order);
         limit->AddOrder(orderBookEntry);
         limitLevels[price] = limit;
         internalOrderBook[order.OrderId()] = *orderBookEntry;
@@ -287,7 +286,7 @@ void OrderBook::PlaceMarketSellOrder(uint32_t quantity) {
 
 MatchResult OrderBook::Match() {
     if (bidLimits_.empty() || askLimits_.empty()) {
-        return MatchResult();
+        return {};
     }
     auto bestBid = bidLimits_.begin()->second;
     auto bestAsk = askLimits_.begin()->second;
@@ -334,5 +333,5 @@ MatchResult OrderBook::Match() {
             }
         }
     }
-    return MatchResult();
+    return {};
 }

@@ -15,15 +15,15 @@ public:
 
     OrderCore(long orderId, std::string username, int securityId);
 
-    inline long OrderId() const {
+    [[nodiscard]] inline long OrderId() const {
         return orderId_;
     };
 
-    inline std::string Username() const {
+    [[nodiscard]] inline std::string Username() const {
         return username_;
     }
 
-    inline int SecurityID() const {
+    [[nodiscard]] inline int SecurityID() const {
         return securityId_;
     }
 };

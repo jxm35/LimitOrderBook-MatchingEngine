@@ -7,7 +7,7 @@
 class RejectionResolver final {
 public:
     static RejectOrder GenerateOrderRejection(OrderCore rejectedOrder, RejectionReason rejectionReason) {
-        return RejectOrder(rejectedOrder, rejectionReason);
+        return {rejectedOrder, rejectionReason};
     }
 
 };

@@ -10,21 +10,21 @@ class ModifyOrder;
 
 class Order : public OrderCore {
 private:
-    long price_;
-    uint32_t initialQuantity_;
-    uint32_t currentQuantity_;
-    bool isBuy_;
+    long price_{};
+    uint32_t initialQuantity_{};
+    uint32_t currentQuantity_{};
+    bool isBuy_{};
 
 public:
     Order(OrderCore orderCore, long price,
           uint32_t quantity, bool isBuy);
 
 
-    Order(const ModifyOrder &modifyOrder);
+    explicit Order(const ModifyOrder &modifyOrder);
 
     Order() : OrderCore(-1, "invalid", -1) {}; // ToFix
 
-    inline long Price() const {
+    [[nodiscard]] inline long Price() const {
         return price_;
     }
 
@@ -32,11 +32,11 @@ public:
         return initialQuantity_;
     }
 
-    inline uint32_t CurrentQuantity() const {
+    [[nodiscard]] inline uint32_t CurrentQuantity() const {
         return currentQuantity_;
     }
 
-    inline bool IsBuy() const {
+    [[nodiscard]] inline bool IsBuy() const {
         return isBuy_;
     }
 
@@ -56,15 +56,15 @@ class ModifyOrder : public OrderCore {
 public:
     ModifyOrder(OrderCore orderCore, long price, uint32_t quantity, bool isBuy);
 
-    inline long Price() const {
+    [[nodiscard]] inline long Price() const {
         return price_;
     }
 
-    inline uint32_t Quantity() const {
+    [[nodiscard]] inline uint32_t Quantity() const {
         return quantity_;
     }
 
-    inline bool IsBuy() const {
+    [[nodiscard]] inline bool IsBuy() const {
         return isBuy_;
     }
 

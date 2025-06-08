@@ -15,6 +15,7 @@ class OrderBookSpread {
 private:
     boost::optional<long> bid_;
     boost::optional<long> ask_;
+
 public:
     OrderBookSpread(boost::optional<long> bid, boost::optional<long> ask) {
         bid_ = bid;
@@ -76,11 +77,11 @@ public:
 
     void PlaceMarketSellOrder(uint32_t quantity);
 
-    void AddOrder(Order order);
+    void AddOrder(const Order &order);
 
     void ChangeOrder(ModifyOrder modifyOrder);
 
-    void RemoveOrder(CancelOrder cancelOrder);
+    void RemoveOrder(const CancelOrder &cancelOrder);
 
     std::list<OrderBookEntry> GetAskOrders();
 

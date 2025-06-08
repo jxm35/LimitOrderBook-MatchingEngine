@@ -1,5 +1,5 @@
 #include "order.h"
-#include "fmt/core.h"
+#include "spdlog/fmt/fmt.h"
 
 Order::Order(OrderCore orderCore, long price, uint32_t quantity, bool isBuy)
         : OrderCore(orderCore) {

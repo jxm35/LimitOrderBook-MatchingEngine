@@ -7,14 +7,16 @@
 
 class OrderStatusResolver final {
 public:
-    static CancelOrderStatus GenerateCancelOrderStatus(CancelOrder co) {
-        return CancelOrderStatus();
+    static CancelOrderStatus GenerateCancelOrderStatus(CancelOrder cancelOrder) {
+        return {};
     }
-    static NewOrderStatus GenerateNewOrderStatus(Order o) {
-        return NewOrderStatus();
+
+    static NewOrderStatus GenerateNewOrderStatus(Order order) {
+        return {};
     }
-    static ModifyOrderStatus GenerateModifyOrderStatus(ModifyOrder mo) {
-        return ModifyOrderStatus();
+
+    static ModifyOrderStatus GenerateModifyOrderStatus(ModifyOrder modifyOrder) {
+        return {};
     }
 
 };
