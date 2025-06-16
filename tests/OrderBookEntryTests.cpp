@@ -6,8 +6,8 @@
 TEST(OrderBookTests, OrderBookEntry) {
     Security sec("name", "code", 1);
     Order order(OrderCore("username", 1), 10, 5, true);
-    Limit *lim = new Limit(10);
-    OrderBookEntry *obe = new OrderBookEntry(lim, order);
+    auto lim = std::make_shared<Limit>(10);
+    auto obe = new OrderBookEntry(lim, order);
     EXPECT_EQ(obe->CurrentOrder().CurrentQuantity(), 5);
 //    obe->CurrentOrder().DecreaseQuantity(2);
 //    order.DecreaseQuantity(2);

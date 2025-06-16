@@ -2,10 +2,10 @@
 
 #include "OrderBook.h"
 
-OrderBook::OrderBook(const Security& instrument) : instrument_(instrument) {
-    askLimits_ = std::map<long, Limit *, std::less<>>();
-    bidLimits_ = std::map<long, Limit *, std::greater<>>();
-    orders_ = std::unordered_map<long, OrderBookEntry>();
+OrderBook::OrderBook(const Security &instrument) : instrument_(instrument) {
+    askLimits_ = std::map<long, std::shared_ptr<Limit>, std::less<>>();
+    bidLimits_ = std::map<long, std::shared_ptr<Limit>, std::greater<>>();
+    orders_ = std::unordered_map<long, std::shared_ptr<OrderBookEntry>>();
     ordersMatched_ = 0;
 }
 
@@ -29,14 +29,14 @@ OrderBookSpread OrderBook::GetSpread() {
     return {bestBid, bestAsk};
 }
 
-boost::optional<Limit *> OrderBook::GetBestBidLimit() {
+boost::optional<std::shared_ptr<Limit>> OrderBook::GetBestBidLimit() {
     if (bidLimits_.empty()) {
         return boost::none;
     }
     return bidLimits_.begin()->second;
 }
 
-boost::optional<Limit *> OrderBook::GetBestAskLimit() {
+boost::optional<std::shared_ptr<Limit>> OrderBook::GetBestAskLimit() {
     if (askLimits_.empty()) {
         return boost::none;
     }
@@ -65,21 +65,21 @@ void OrderBook::AddOrder(const Order &order) {
 
 void OrderBook::ChangeOrder(ModifyOrder modifyOrder) {
     if (orders_.contains(modifyOrder.OrderId())) {
-        OrderBookEntry obe = orders_.at(modifyOrder.OrderId());
+        auto obe = orders_.at(modifyOrder.OrderId());
         RemoveOrder(modifyOrder.ToCancelOrder());
-        obe.CurrentOrder().IsBuy() ?
-        AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(), bidLimits_, orders_)
-                                   : AddOrder(modifyOrder.ToNewOrder(), obe.CurrentOrder().Price(), askLimits_,
-                                              orders_);
+        obe->CurrentOrder().IsBuy() ?
+        AddOrder(modifyOrder.ToNewOrder(), obe->CurrentOrder().Price(), bidLimits_, orders_)
+                                    : AddOrder(modifyOrder.ToNewOrder(), obe->CurrentOrder().Price(), askLimits_,
+                                               orders_);
     }
 
 }
 
 void OrderBook::RemoveOrder(const CancelOrder &cancelOrder) {
     if (orders_.contains(cancelOrder.OrderId())) {
-        OrderBookEntry obe = orders_.at(cancelOrder.OrderId());
-        obe.CurrentOrder().IsBuy() ? RemoveOrder(cancelOrder.OrderId(), obe, bidLimits_, orders_)
-                                   : RemoveOrder(cancelOrder.OrderId(), obe, askLimits_, orders_);
+        auto obe = orders_.at(cancelOrder.OrderId());
+        obe->CurrentOrder().IsBuy() ? RemoveOrder(cancelOrder.OrderId(), obe, bidLimits_, orders_)
+                                    : RemoveOrder(cancelOrder.OrderId(), obe, askLimits_, orders_);
 
     } else {
         throw std::invalid_argument("order id not found");
@@ -87,12 +87,12 @@ void OrderBook::RemoveOrder(const CancelOrder &cancelOrder) {
 }
 
 std::list<OrderBookEntry> OrderBook::GetAskOrders() {
-    std::list<OrderBookEntry> orderBookEntries;
+    std::list < OrderBookEntry > orderBookEntries;
     for (const auto &askLimit: askLimits_) {
         if (askLimit.second->IsEmpty()) {
             continue;
         }
-        OrderBookEntry *askLimitPtr = askLimit.second->head_;
+        std::shared_ptr<OrderBookEntry> askLimitPtr = askLimit.second->head_;
         while (askLimitPtr != nullptr) {
             orderBookEntries.push_back(*askLimitPtr);
             askLimitPtr = askLimitPtr->next;
@@ -102,12 +102,12 @@ std::list<OrderBookEntry> OrderBook::GetAskOrders() {
 }
 
 std::list<OrderBookEntry> OrderBook::GetBidOrders() {
-    std::list<OrderBookEntry> orderBookEntries;
+    std::list < OrderBookEntry > orderBookEntries;
     for (const auto &bidLimit: bidLimits_) {
         if (bidLimit.second->IsEmpty()) {
             continue;
         }
-        OrderBookEntry *bidLimitPtr = bidLimit.second->head_;
+        std::shared_ptr<OrderBookEntry> bidLimitPtr = bidLimit.second->head_;
         while (bidLimitPtr != nullptr) {
             orderBookEntries.push_back(*bidLimitPtr);
             bidLimitPtr = bidLimitPtr->next;
@@ -139,7 +139,7 @@ std::map<long, uint32_t> OrderBook::GetAskQuantities() {
 }
 
 std::list<OrderStruct> OrderBook::GetOrders() {
-    std::list<OrderStruct> orders;
+    std::list < OrderStruct > orders;
     for (const auto &limit: askLimits_) {
         orders.splice(orders.end(), limit.second->GetOrderRecords());
     }
@@ -150,58 +150,64 @@ std::list<OrderStruct> OrderBook::GetOrders() {
 }
 
 template<typename sort>
-void OrderBook::AddOrder(Order order, long price, std::map<long, Limit *, sort> &limitLevels,
-                         std::unordered_map<long, OrderBookEntry> &internalOrderBook) {
-    if (limitLevels.contains(price)) {
-        auto lim = limitLevels.find(price);
-        if (lim != limitLevels.end()) {
-            auto *orderBookEntry = new OrderBookEntry(lim->second, order);
-            lim->second->AddOrder(orderBookEntry);
-            internalOrderBook[order.OrderId()] = *orderBookEntry;
-        } else {
-            throw std::invalid_argument("we are supposed to have a limit");
-        }
+void OrderBook::AddOrder(Order order, long price,
+                         std::map<long, std::shared_ptr<Limit>, sort> &limitLevels,
+                         std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &internalOrderBook) {
+
+    auto orderId = order.OrderId();
+    auto lim = limitLevels.find(price);
+    if (lim != limitLevels.end()) {
+        auto orderBookEntry = std::make_shared<OrderBookEntry>(lim->second, order);
+        lim->second->AddOrder(orderBookEntry);
+        internalOrderBook[orderId] = orderBookEntry;
     } else {
-        // level does not exist
-        auto *limit = new Limit(price);
-        auto *orderBookEntry = new OrderBookEntry(limit, order);
+        auto limit = std::make_shared<Limit>(price);
+        auto orderBookEntry = std::make_shared<OrderBookEntry>(limit, order);
         limit->AddOrder(orderBookEntry);
         limitLevels[price] = limit;
-        internalOrderBook[order.OrderId()] = *orderBookEntry;
+        internalOrderBook[orderId] = orderBookEntry;
     }
 }
 
 template<typename sort>
-void OrderBook::RemoveOrder(long orderId, const OrderBookEntry &obe, std::map<long, Limit *, sort> &limitLevels,
-                            std::unordered_map<long, OrderBookEntry> &internalOrderBook) {
-    if (obe.Limit()->GetOrderCount() == 1) {
-        limitLevels.erase(obe.CurrentOrder().Price());
-        delete (obe.Limit()->head_);
-        delete (obe.Limit());
+void OrderBook::RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry> &obe,
+                            std::map<long, std::shared_ptr<Limit>, sort> &limitLevels,
+                            std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &internalOrderBook) {
+
+    auto limit = obe->GetLimit();
+    if (!limit) {
         internalOrderBook.erase(orderId);
         return;
     }
-    // remove from limit linked list
-    if (obe.previous != nullptr && obe.next != nullptr) {
-        obe.next->previous = obe.previous;
-        obe.previous->next = obe.next;
-    } else if (obe.previous != nullptr) {
-        obe.previous->next = nullptr;
-    } else if (obe.next != nullptr) {
-        obe.next->previous = nullptr;
+
+    if (limit->GetOrderCount() == 1) {
+        limitLevels.erase(obe->CurrentOrder().Price());
+        internalOrderBook.erase(orderId);
+        return;
     }
 
-    // remove from limit obj
-    obe.Limit()->RemoveOrder(obe.CurrentOrder().OrderId(), obe.CurrentOrder().CurrentQuantity());
+    auto prev = obe->previous.lock();
+    auto next = obe->next;
+
+    if (prev && next) {
+        next->previous = obe->previous;
+        prev->next = next;
+    } else if (prev) {
+        prev->next = nullptr;
+    } else if (next) {
+        next->previous.reset();
+    }
+
+    limit->RemoveOrder(obe->CurrentOrder().OrderId(), obe->CurrentOrder().CurrentQuantity());
     internalOrderBook.erase(orderId);
 }
 
 void OrderBook::PlaceMarketBuyOrder(uint32_t quantity) {
-    std::list<OrderBookEntry *> toRemove;
+    std::list<std::shared_ptr<OrderBookEntry>> toRemove;
     if (askLimits_.empty()) {
         return;
     }
-    for (std::pair<long, Limit *> limit: askLimits_) {
+    for (std::pair<long, std::shared_ptr<Limit>> limit: askLimits_) {
         auto askPtr = limit.second->head_;
         while (askPtr != nullptr) {
             if (quantity == askPtr->CurrentOrder().CurrentQuantity()) {
@@ -235,17 +241,17 @@ void OrderBook::PlaceMarketBuyOrder(uint32_t quantity) {
             break;
         }
     }
-    for (auto obe: toRemove) {
-        RemoveOrder(obe->CurrentOrder().OrderId(), *obe, askLimits_, orders_);
+    for (const auto &obe: toRemove) {
+        RemoveOrder(obe->CurrentOrder().OrderId(), obe, askLimits_, orders_);
     }
 }
 
 void OrderBook::PlaceMarketSellOrder(uint32_t quantity) {
-    std::list<OrderBookEntry *> toRemove;
+    std::list<std::shared_ptr<OrderBookEntry>> toRemove;
     if (bidLimits_.empty()) {
         return;
     }
-    for (std::pair<long, Limit *> limit: bidLimits_) {
+    for (std::pair<long, std::shared_ptr<Limit>> limit: bidLimits_) {
         auto bidPtr = limit.second->head_;
         while (bidPtr != nullptr) {
             if (quantity == bidPtr->CurrentOrder().CurrentQuantity()) {
@@ -279,8 +285,8 @@ void OrderBook::PlaceMarketSellOrder(uint32_t quantity) {
             break;
         }
     }
-    for (auto obe: toRemove) {
-        RemoveOrder(obe->CurrentOrder().OrderId(), *obe, bidLimits_, orders_);
+    for (const auto &obe: toRemove) {
+        RemoveOrder(obe->CurrentOrder().OrderId(), obe, bidLimits_, orders_);
     }
 }
 
@@ -304,7 +310,7 @@ MatchResult OrderBook::Match() {
                              bidPrice);
                 ordersMatched_ += askPtr->CurrentOrder().CurrentQuantity();
                 auto next = askPtr->next;
-                RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
+                RemoveOrder(askPtr->CurrentOrder().OrderId(), askPtr, askLimits_, orders_);
                 askPtr = next;
             } else if (bidPtr->CurrentOrder().CurrentQuantity() < askPtr->CurrentOrder().CurrentQuantity()) {
                 askPtr->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
@@ -315,7 +321,7 @@ MatchResult OrderBook::Match() {
                              bidPrice);
                 ordersMatched_ += bidPtr->CurrentOrder().CurrentQuantity();
                 auto next = bidPtr->next;
-                RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
+                RemoveOrder(bidPtr->CurrentOrder().OrderId(), bidPtr, bidLimits_, orders_);
                 bidPtr = next;
             } else {
                 spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
@@ -325,10 +331,10 @@ MatchResult OrderBook::Match() {
                 // remove bidPtr + askPtr;
                 ordersMatched_ += askPtr->CurrentOrder().CurrentQuantity();
                 auto next = askPtr->next;
-                RemoveOrder(askPtr->CurrentOrder().OrderId(), *askPtr, askLimits_, orders_);
+                RemoveOrder(askPtr->CurrentOrder().OrderId(), askPtr, askLimits_, orders_);
                 askPtr = next;
                 next = bidPtr->next;
-                RemoveOrder(bidPtr->CurrentOrder().OrderId(), *bidPtr, bidLimits_, orders_);
+                RemoveOrder(bidPtr->CurrentOrder().OrderId(), bidPtr, bidLimits_, orders_);
                 bidPtr = next;
             }
         }

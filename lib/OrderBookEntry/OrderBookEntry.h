@@ -1,8 +1,10 @@
 #pragma once
 
 #include <chrono>
-#include <ctime>
+#include <memory>
 #include <list>
+#include <optional>
+#include <expected>
 
 #include "order.h"
 
@@ -10,47 +12,7 @@ class Limit;
 
 class OrderBookEntry;
 
-class OrderBookEntry {
-private:
-    Order currentOrder_;
-    Limit *limit_;
-    std::time_t creationTime_{};
-public:
-    OrderBookEntry *next{};
-    OrderBookEntry *previous{};
-
-    OrderBookEntry(class Limit *parentLimit, const Order &currentOrder);
-
-    OrderBookEntry() {};  // ToFix allows use with std::pair
-
-    void DecreaseQuantity(uint16_t quantity) {
-        currentOrder_.DecreaseQuantity(quantity);
-    }
-
-    [[nodiscard]] Order CurrentOrder() const {
-        return currentOrder_;
-    }
-
-    [[nodiscard]] Limit *Limit() const {
-        return limit_;
-    }
-
-    [[nodiscard]] std::time_t CreationTime() const {
-        return creationTime_;
-    }
-
-//    bool operator==(const OrderBookEntry &rhs) {
-//        return this->currentOrder_.OrderId() == rhs.currentOrder_.OrderId();
-//    }
-//
-//    bool operator!=(const OrderBookEntry &rhs) {
-//        return this->currentOrder_.OrderId() != rhs.currentOrder_.OrderId();
-//    }
-
-};
-
-
-enum Side {
+enum class Side {
     Unknown,
     Bid,
     Ask
@@ -63,100 +25,109 @@ struct OrderStruct {
     bool isBuySide;
     std::string username;
     int securityId;
-    uint32_t QueuePosition;
+    uint32_t queuePosition;
+};
+
+class OrderBookEntry {
+private:
+    Order currentOrder_;
+    std::weak_ptr<Limit> limit_;  // weak_ptr to avoid circular references
+    std::chrono::time_point<std::chrono::steady_clock> creationTime_;
+
+public:
+    std::shared_ptr<OrderBookEntry> next;
+    std::weak_ptr<OrderBookEntry> previous;  // weak_ptr to avoid circular references
+
+    OrderBookEntry(std::shared_ptr<Limit> parentLimit, Order currentOrder);
+
+    OrderBookEntry() = delete;  // Remove default constructor
+
+    void DecreaseQuantity(uint16_t quantity) {
+        currentOrder_.DecreaseQuantity(quantity);
+    }
+
+    [[nodiscard]] const Order &CurrentOrder() const noexcept {
+        return currentOrder_;
+    }
+
+    [[nodiscard]] std::shared_ptr<Limit> GetLimit() const {
+        return limit_.lock();
+    }
+
+    [[nodiscard]] auto CreationTime() const noexcept {
+        return creationTime_;
+    }
 };
 
 class Limit {
 private:
     long price_;
     long size_;
-    // this has been stored as a field so we don't have to traverse a linked list every time we want to check order quantity at a level
     uint32_t orderQuantity_;
 
 public:
     explicit Limit(long price);
 
-    // mutable to allow us to change these in a logically const Limit (in a set)
-    OrderBookEntry mutable *head_;
-    OrderBookEntry mutable *tail_;
+    std::shared_ptr<OrderBookEntry> head_;
+    std::shared_ptr<OrderBookEntry> tail_;
 
-    bool IsEmpty() const {
-        return head_ == nullptr && tail_ == nullptr;
+    [[nodiscard]] bool IsEmpty() const noexcept {
+        return !head_ && !tail_;
     }
 
-    inline long Price() const {
+    [[nodiscard]] long Price() const noexcept {
         return price_;
     }
 
-    void AddOrder(OrderBookEntry *obe);
+    void AddOrder(std::shared_ptr<OrderBookEntry> orderBookEntry);
 
-    void RemoveOrder(long orderId, uint32_t quantity);
+    std::expected<void, std::string> RemoveOrder(long orderId, uint32_t quantity);
 
-    inline void DecreaseQuantity(uint32_t quantity) {
-        if (quantity > orderQuantity_)
+    void DecreaseQuantity(uint32_t quantity) {
+        if (quantity > orderQuantity_) [[unlikely]] {
             throw std::invalid_argument("removing too much");
+        }
         orderQuantity_ -= quantity;
     }
 
-    Side Side() const {
-        if (IsEmpty())
+    [[nodiscard]] Side GetSide() const noexcept {
+        if (IsEmpty()) {
             return Side::Unknown;
-        if (head_->CurrentOrder().IsBuy()) {
-            return Side::Bid;
-        } else {
-            return Side::Ask;
         }
+        return head_->CurrentOrder().IsBuy() ? Side::Bid : Side::Ask;
     }
 
-
-    uint32_t GetOrderCount() const {
+    [[nodiscard]] uint32_t GetOrderCount() const noexcept {
         return size_;
     }
 
-    uint32_t GetOrderQuantity() const {
+    [[nodiscard]] uint32_t GetOrderQuantity() const noexcept {
         return orderQuantity_;
     }
 
-    std::list<OrderStruct> GetOrderRecords() const {
-        std::list<OrderStruct> orderRecords;
-        OrderBookEntry *entryPtr = head_;
-        uint32_t queuePosition = 0;
-        while (entryPtr != nullptr) {
-            Order currentOrder = entryPtr->CurrentOrder();
-            if (currentOrder.CurrentQuantity() != 0) {
-                orderRecords.push_back(OrderStruct{
-                        currentOrder.OrderId(),
-                        currentOrder.CurrentQuantity(),
-                        currentOrder.Price(),
-                        currentOrder.IsBuy(),
-                        currentOrder.Username(),
-                        currentOrder.SecurityID(),
-                        queuePosition,
-                });
-                queuePosition++;
-                entryPtr = entryPtr->next;
-            }
-        }
-        return orderRecords;
-    }
-
+    [[nodiscard]] std::list<OrderStruct> GetOrderRecords() const;
 };
 
-//         orderRecords.sort([](const OrderStruct &f, const OrderStruct &s) { return f.price < s.price; })
-
+// Modern comparators using concepts
 struct SortAsks {
-    bool operator()(const Limit &f, const Limit &s) const {
-        return f.Price() < s.Price();
+    constexpr bool operator()(const std::shared_ptr<Limit> &f, const std::shared_ptr<Limit> &s) const noexcept {
+        return f->Price() < s->Price();
     }
 };
 
 struct SortBids {
-    bool operator()(const Limit &f, const Limit &s) const {
-        return f.Price() > s.Price();
+    constexpr bool operator()(const std::shared_ptr<Limit> &f, const std::shared_ptr<Limit> &s) const noexcept {
+        return f->Price() > s->Price();
     }
 };
 
+// Error handling with expected
+enum class OrderBookError {
+    OrderNotFound,
+    InvalidQuantity,
+    EmptyBook,
+    LimitNotFound
+};
 
-
-
-
+template<typename T>
+using OrderBookResult = std::expected<T, OrderBookError>;

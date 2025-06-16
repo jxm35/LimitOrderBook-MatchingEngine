@@ -18,11 +18,11 @@ TEST(OrderBookTests, CanAddBids) {
     book.AddOrder(order1);
     EXPECT_EQ(book.Count(), 1);
     EXPECT_TRUE(book.ContainsOrder(order1.OrderId()));
-    std::list<OrderBookEntry> bids = book.GetBidOrders();
-    EXPECT_EQ(bids.begin()->Limit()->Price(), 50);
-    EXPECT_EQ(bids.begin()->Limit()->IsEmpty(), false);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderCount(), 1);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderQuantity(), 20);
+    std::list < OrderBookEntry > bids = book.GetBidOrders();
+    EXPECT_EQ(bids.begin()->GetLimit()->Price(), 50);
+    EXPECT_EQ(bids.begin()->GetLimit()->IsEmpty(), false);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderCount(), 1);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderQuantity(), 20);
     EXPECT_EQ(bids.begin()->CurrentOrder().OrderId(), order1.OrderId());
 }
 
@@ -35,11 +35,11 @@ TEST(OrderBookTests, CanAddAsks) {
     book.AddOrder(order1);
     EXPECT_EQ(book.Count(), 1);
     EXPECT_TRUE(book.ContainsOrder(order1.OrderId()));
-    std::list<OrderBookEntry> bids = book.GetAskOrders();
-    EXPECT_EQ(bids.begin()->Limit()->Price(), 45);
-    EXPECT_EQ(bids.begin()->Limit()->IsEmpty(), false);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderCount(), 1);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderQuantity(), 15);
+    std::list < OrderBookEntry > bids = book.GetAskOrders();
+    EXPECT_EQ(bids.begin()->GetLimit()->Price(), 45);
+    EXPECT_EQ(bids.begin()->GetLimit()->IsEmpty(), false);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderCount(), 1);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderQuantity(), 15);
     EXPECT_EQ(bids.begin()->CurrentOrder().OrderId(), order1.OrderId());
 }
 
@@ -53,13 +53,13 @@ TEST(OrderBookTests, CanAddBidsSameLevel) {
     book.AddOrder(order1);
     book.AddOrder(order2);
     EXPECT_EQ(book.Count(), 2);
-    std::list<OrderBookEntry> bids = book.GetBidOrders();
-    EXPECT_EQ(bids.begin()->Limit()->Price(), 45);
-    EXPECT_EQ(bids.begin()->Limit()->IsEmpty(), false);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderCount(), 2);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderQuantity(), 8);
-    EXPECT_EQ(bids.begin()->Limit()->head_->CurrentOrder().OrderId(), order1.OrderId());
-    EXPECT_EQ(bids.begin()->Limit()->head_->next->CurrentOrder().OrderId(), order2.OrderId());
+    std::list < OrderBookEntry > bids = book.GetBidOrders();
+    EXPECT_EQ(bids.begin()->GetLimit()->Price(), 45);
+    EXPECT_EQ(bids.begin()->GetLimit()->IsEmpty(), false);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderCount(), 2);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderQuantity(), 8);
+    EXPECT_EQ(bids.begin()->GetLimit()->head_->CurrentOrder().OrderId(), order1.OrderId());
+    EXPECT_EQ(bids.begin()->GetLimit()->head_->next->CurrentOrder().OrderId(), order2.OrderId());
 }
 
 TEST(OrderBookTests, CanGetBidAskSpread) {
@@ -89,7 +89,7 @@ TEST(OrderBookTests, CanCancelBids) {
     CancelOrder cancelOrder(OrderCore(order1.OrderId(), USERNAME, SECURITY_ID));
     book.RemoveOrder(cancelOrder);
     EXPECT_EQ(book.Count(), 0);
-    std::list<OrderBookEntry> bids = book.GetBidOrders();
+    std::list < OrderBookEntry > bids = book.GetBidOrders();
     EXPECT_EQ(bids.size(), 0);
 }
 
@@ -103,11 +103,11 @@ TEST(OrderBookTests, CanModifyBids) {
     ModifyOrder modifyOrder(OrderCore(order1.OrderId(), USERNAME, SECURITY_ID), 50, 15, true);
     book.ChangeOrder(modifyOrder);
     EXPECT_EQ(book.Count(), 1);
-    std::list<OrderBookEntry> bids = book.GetBidOrders();
-    EXPECT_EQ(bids.begin()->Limit()->Price(), 50);
-    EXPECT_EQ(bids.begin()->Limit()->IsEmpty(), false);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderCount(), 1);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderQuantity(), 15);
+    std::list < OrderBookEntry > bids = book.GetBidOrders();
+    EXPECT_EQ(bids.begin()->GetLimit()->Price(), 50);
+    EXPECT_EQ(bids.begin()->GetLimit()->IsEmpty(), false);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderCount(), 1);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderQuantity(), 15);
     EXPECT_EQ(bids.begin()->CurrentOrder().OrderId(), order1.OrderId());
 }
 
@@ -121,10 +121,10 @@ TEST(OrderBookTests, CanMatch) {
     ModifyOrder modifyOrder(OrderCore(order1.OrderId(), USERNAME, SECURITY_ID), 50, 15, true);
     book.ChangeOrder(modifyOrder);
     EXPECT_EQ(book.Count(), 1);
-    std::list<OrderBookEntry> bids = book.GetBidOrders();
-    EXPECT_EQ(bids.begin()->Limit()->Price(), 50);
-    EXPECT_EQ(bids.begin()->Limit()->IsEmpty(), false);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderCount(), 1);
-    EXPECT_EQ(bids.begin()->Limit()->GetOrderQuantity(), 15);
+    std::list < OrderBookEntry > bids = book.GetBidOrders();
+    EXPECT_EQ(bids.begin()->GetLimit()->Price(), 50);
+    EXPECT_EQ(bids.begin()->GetLimit()->IsEmpty(), false);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderCount(), 1);
+    EXPECT_EQ(bids.begin()->GetLimit()->GetOrderQuantity(), 15);
     EXPECT_EQ(bids.begin()->CurrentOrder().OrderId(), order1.OrderId());
 }
