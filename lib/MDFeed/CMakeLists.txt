@@ -4,15 +4,12 @@ set(HEADER_FILES
         include/utils/PublisherConfig.h
         include/publisher/MulticastPublisher.h
         include/publisher/MarketDataPublisher.h
-        include/publisher/DeltaGenerator.h
         include/publisher/MDAdapter.h
 )
 
 set(SOURCE_FILES
         src/publisher/MulticastPublisher.cpp
-        src/publisher/DeltaGenerator.cpp
         src/publisher/MarketDataPublisher.cpp
-        src/publisher/MDAdapter.cpp
 )
 
 add_library(MDFeed STATIC ${SOURCE_FILES} ${HEADER_FILES})

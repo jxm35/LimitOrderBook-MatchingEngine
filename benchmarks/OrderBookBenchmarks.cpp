@@ -1,20 +1,36 @@
 #include <benchmark/benchmark.h>
-#include <iostream>
 #include <random>
 #include "Security.h"
 #include "OrderBook.h"
+#include "publisher/MarketDataPublisher.h"
 #include "spdlog/spdlog.h"
+
+static OrderBook<mdfeed::NullMarketDataPublisher> createOrderBook()
+{
+    const int SECURITY_ID = 1;
+    Security apl("apple", "AAPL", SECURITY_ID);
+    mdfeed::NullMarketDataPublisher publisher = mdfeed::NullMarketDataPublisher();
+    mdfeed::MDAdapter mdAdapter(SECURITY_ID, publisher);
+    return OrderBook(apl, mdAdapter);
+}
+
+// static OrderBook<mdfeed::MarketDataPublisher> createOrderBook()
+// {
+//     const int SECURITY_ID = 1;
+//     Security apl("apple", "AAPL", SECURITY_ID);
+//     mdfeed::MarketDataPublisher publisher = mdfeed::MarketDataPublisher();
+//     mdfeed::MDAdapter mdAdapter(SECURITY_ID, publisher);
+//     return OrderBook(apl, mdAdapter);
+// }
 
 static void BM_PlaceMarketOrder(benchmark::State& state)
 {
     spdlog::set_level(spdlog::level::err);
-    const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     uint64_t i = 0;
-    Security apl("apple", "AAPL", SECURITY_ID);
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
         auto start = std::chrono::high_resolution_clock::now();
         book.PlaceMarketSellOrder(50);
@@ -37,7 +53,7 @@ static void BM_PlaceMarketOrderAcross3Bids(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
@@ -62,7 +78,7 @@ static void BM_Get_Order(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         Order bid(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(bid);
         auto start = std::chrono::high_resolution_clock::now();
@@ -86,7 +102,7 @@ static void BM_Get_Best_Bid(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         Order bid(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(bid);
         auto start = std::chrono::high_resolution_clock::now();
@@ -110,7 +126,7 @@ static void BM_Add_Order_Existing_Limit(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
         Order bid(OrderCore(USERNAME, 1), 500, 100, true);
         auto start = std::chrono::high_resolution_clock::now();
@@ -134,7 +150,7 @@ static void BM_Add_Order_New_Limit(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         Order bid(Order(OrderCore(USERNAME, 1), 500, 100, true));
         auto start = std::chrono::high_resolution_clock::now();
         book.AddOrder(bid);
@@ -157,7 +173,7 @@ static void BM_Remove_Order(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         Order order = Order(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(order);
         auto start = std::chrono::high_resolution_clock::now();
@@ -181,7 +197,7 @@ static void BM_Match_UnCrossed_Orders(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         Order bid = Order(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(bid);
         Order ask = Order(OrderCore(USERNAME, 1), 501, 100, false);
@@ -207,7 +223,7 @@ static void BM_Match_Crossed_Orders(benchmark::State& state)
     uint64_t i = 0;
     for (auto _ : state)
     {
-        OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+        auto book = createOrderBook();
         Order bid = Order(OrderCore(USERNAME, 1), 501, 100, true);
         book.AddOrder(bid);
         Order ask = Order(OrderCore(USERNAME, 1), 500, 100, false);
@@ -231,7 +247,7 @@ static void BM_Run_Simulation(benchmark::State& state)
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
-    OrderBook book(apl, std::unique_ptr<mdfeed::NullDeltaGenerator>());
+    auto book = createOrderBook();
 
     std::random_device device_random_;
     std::default_random_engine generator_(device_random_());

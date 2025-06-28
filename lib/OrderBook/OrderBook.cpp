@@ -2,27 +2,38 @@
 
 #include "OrderBook.h"
 
-OrderBook::OrderBook(const Security& instrument, std::unique_ptr<mdfeed::DeltaGenerator> delta_generator) : instrument_(
-    instrument)
+#include "publisher/MarketDataPublisher.h"
+
+namespace mdfeed
+{
+    class NullMarketDataPublisher;
+}
+
+template <typename MarketDataPublisher>
+OrderBook<MarketDataPublisher>::OrderBook(const Security& instrument,
+                                          mdfeed::MDAdapter<MarketDataPublisher> md_adapter) : instrument_(
+        instrument), md_adapter_(md_adapter)
 {
     askLimits_ = std::map<long, std::shared_ptr<Limit>, std::less<>>();
     bidLimits_ = std::map<long, std::shared_ptr<Limit>, std::greater<>>();
     orders_ = std::unordered_map<long, std::shared_ptr<OrderBookEntry>>();
     ordersMatched_ = 0;
-    md_adapter_ = std::make_unique<mdfeed::MDAdapter>(instrument.GetSecurityId(), std::move(delta_generator));
 }
 
-size_t OrderBook::Count()
+template <typename MarketDataPublisher>
+size_t OrderBook<MarketDataPublisher>::Count()
 {
     return orders_.size();
 }
 
-bool OrderBook::ContainsOrder(long orderId)
+template <typename MarketDataPublisher>
+bool OrderBook<MarketDataPublisher>::ContainsOrder(long orderId)
 {
     return orders_.contains(orderId);
 }
 
-OrderBookSpread OrderBook::GetSpread()
+template <typename MarketDataPublisher>
+OrderBookSpread OrderBook<MarketDataPublisher>::GetSpread()
 {
     boost::optional<long> bestAsk = boost::none;
     boost::optional<long> bestBid = boost::none;
@@ -37,7 +48,8 @@ OrderBookSpread OrderBook::GetSpread()
     return {bestBid, bestAsk};
 }
 
-boost::optional<std::shared_ptr<Limit>> OrderBook::GetBestBidLimit()
+template <typename MarketDataPublisher>
+boost::optional<std::shared_ptr<Limit>> OrderBook<MarketDataPublisher>::GetBestBidLimit()
 {
     if (bidLimits_.empty())
     {
@@ -46,7 +58,8 @@ boost::optional<std::shared_ptr<Limit>> OrderBook::GetBestBidLimit()
     return bidLimits_.begin()->second;
 }
 
-boost::optional<std::shared_ptr<Limit>> OrderBook::GetBestAskLimit()
+template <typename MarketDataPublisher>
+boost::optional<std::shared_ptr<Limit>> OrderBook<MarketDataPublisher>::GetBestAskLimit()
 {
     if (askLimits_.empty())
     {
@@ -55,7 +68,8 @@ boost::optional<std::shared_ptr<Limit>> OrderBook::GetBestAskLimit()
     return askLimits_.begin()->second;
 }
 
-boost::optional<long> OrderBook::GetBestBidPrice()
+template <typename MarketDataPublisher>
+boost::optional<long> OrderBook<MarketDataPublisher>::GetBestBidPrice()
 {
     if (bidLimits_.empty())
     {
@@ -64,7 +78,8 @@ boost::optional<long> OrderBook::GetBestBidPrice()
     return bidLimits_.begin()->first;
 }
 
-boost::optional<long> OrderBook::GetBestAskPrice()
+template <typename MarketDataPublisher>
+boost::optional<long> OrderBook<MarketDataPublisher>::GetBestAskPrice()
 {
     if (askLimits_.empty())
     {
@@ -73,14 +88,16 @@ boost::optional<long> OrderBook::GetBestAskPrice()
     return askLimits_.begin()->first;
 }
 
-void OrderBook::AddOrder(const Order& order)
+template <typename MarketDataPublisher>
+void OrderBook<MarketDataPublisher>::AddOrder(const Order& order)
 {
     order.IsBuy()
         ? AddOrder(order, order.Price(), bidLimits_, orders_)
         : AddOrder(order, order.Price(), askLimits_, orders_);
 }
 
-void OrderBook::ChangeOrder(ModifyOrder modifyOrder)
+template <typename MarketDataPublisher>
+void OrderBook<MarketDataPublisher>::ChangeOrder(ModifyOrder modifyOrder)
 {
     if (orders_.contains(modifyOrder.OrderId()))
     {
@@ -93,7 +110,8 @@ void OrderBook::ChangeOrder(ModifyOrder modifyOrder)
     }
 }
 
-void OrderBook::RemoveOrder(const CancelOrder& cancelOrder)
+template <typename MarketDataPublisher>
+void OrderBook<MarketDataPublisher>::RemoveOrder(const CancelOrder& cancelOrder)
 {
     if (orders_.contains(cancelOrder.OrderId()))
     {
@@ -108,7 +126,8 @@ void OrderBook::RemoveOrder(const CancelOrder& cancelOrder)
     }
 }
 
-std::list<OrderBookEntry> OrderBook::GetAskOrders()
+template <typename MarketDataPublisher>
+std::list<OrderBookEntry> OrderBook<MarketDataPublisher>::GetAskOrders()
 {
     std::list<OrderBookEntry> orderBookEntries;
     for (const auto& askLimit : askLimits_)
@@ -127,7 +146,8 @@ std::list<OrderBookEntry> OrderBook::GetAskOrders()
     return orderBookEntries;
 }
 
-std::list<OrderBookEntry> OrderBook::GetBidOrders()
+template <typename MarketDataPublisher>
+std::list<OrderBookEntry> OrderBook<MarketDataPublisher>::GetBidOrders()
 {
     std::list<OrderBookEntry> orderBookEntries;
     for (const auto& bidLimit : bidLimits_)
@@ -146,7 +166,8 @@ std::list<OrderBookEntry> OrderBook::GetBidOrders()
     return orderBookEntries;
 }
 
-std::map<long, uint32_t> OrderBook::GetBidQuantities()
+template <typename MarketDataPublisher>
+std::map<long, uint32_t> OrderBook<MarketDataPublisher>::GetBidQuantities()
 {
     std::map<long, uint32_t> limitQuantities;
     for (const auto& bidLimit : bidLimits_)
@@ -160,7 +181,8 @@ std::map<long, uint32_t> OrderBook::GetBidQuantities()
     return limitQuantities;
 }
 
-std::map<long, uint32_t> OrderBook::GetAskQuantities()
+template <typename MarketDataPublisher>
+std::map<long, uint32_t> OrderBook<MarketDataPublisher>::GetAskQuantities()
 {
     std::map<long, uint32_t> limitQuantities;
     for (const auto& Limit : askLimits_)
@@ -174,7 +196,8 @@ std::map<long, uint32_t> OrderBook::GetAskQuantities()
     return limitQuantities;
 }
 
-std::list<OrderStruct> OrderBook::GetOrders()
+template <typename MarketDataPublisher>
+std::list<OrderStruct> OrderBook<MarketDataPublisher>::GetOrders()
 {
     std::list<OrderStruct> orders;
     for (const auto& limit : askLimits_)
@@ -188,10 +211,12 @@ std::list<OrderStruct> OrderBook::GetOrders()
     return orders;
 }
 
+template <typename MarketDataPublisher>
 template <typename sort>
-void OrderBook::AddOrder(Order order, long price,
-                         std::map<long, std::shared_ptr<Limit>, sort>& limitLevels,
-                         std::unordered_map<long, std::shared_ptr<OrderBookEntry>>& internalOrderBook)
+void OrderBook<MarketDataPublisher>::AddOrder(Order order, long price,
+                                              std::map<long, std::shared_ptr<Limit>, sort>& limitLevels,
+                                              std::unordered_map<long, std::shared_ptr<OrderBookEntry>>&
+                                              internalOrderBook)
 {
     auto orderId = order.OrderId();
     auto lim = limitLevels.find(price);
@@ -211,10 +236,12 @@ void OrderBook::AddOrder(Order order, long price,
     }
 }
 
+template <typename MarketDataPublisher>
 template <typename sort>
-void OrderBook::RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry>& obe,
-                            std::map<long, std::shared_ptr<Limit>, sort>& limitLevels,
-                            std::unordered_map<long, std::shared_ptr<OrderBookEntry>>& internalOrderBook)
+void OrderBook<MarketDataPublisher>::RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry>& obe,
+                                                 std::map<long, std::shared_ptr<Limit>, sort>& limitLevels,
+                                                 std::unordered_map<long, std::shared_ptr<OrderBookEntry>>&
+                                                 internalOrderBook)
 {
     auto limit = obe->GetLimit();
     if (!limit)
@@ -251,7 +278,8 @@ void OrderBook::RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry>&
     internalOrderBook.erase(orderId);
 }
 
-void OrderBook::PlaceMarketBuyOrder(uint32_t quantity)
+template <typename MarketDataPublisher>
+void OrderBook<MarketDataPublisher>::PlaceMarketBuyOrder(uint32_t quantity)
 {
     std::list<std::shared_ptr<OrderBookEntry>> toRemove;
     if (askLimits_.empty())
@@ -305,7 +333,8 @@ void OrderBook::PlaceMarketBuyOrder(uint32_t quantity)
     }
 }
 
-void OrderBook::PlaceMarketSellOrder(uint32_t quantity)
+template <typename MarketDataPublisher>
+void OrderBook<MarketDataPublisher>::PlaceMarketSellOrder(uint32_t quantity)
 {
     std::list<std::shared_ptr<OrderBookEntry>> toRemove;
     if (bidLimits_.empty())
@@ -359,7 +388,8 @@ void OrderBook::PlaceMarketSellOrder(uint32_t quantity)
     }
 }
 
-MatchResult OrderBook::Match()
+template <typename MarketDataPublisher>
+MatchResult OrderBook<MarketDataPublisher>::Match()
 {
     if (bidLimits_.empty() || askLimits_.empty())
     {
@@ -381,7 +411,7 @@ MatchResult OrderBook::Match()
             {
                 bidPtr->DecreaseQuantity(askQty);
                 bestBid->DecreaseQuantity(askQty); // TODO: Move delta notification to here
-                md_adapter_->notify_price_level_change(bidPrice, bidQty - askQty, bidQty, true);
+                md_adapter_.notify_price_level_change(bidPrice, bidQty - askQty, bidQty, true);
                 spdlog::info("buy order {} partially filled @ {} pence", bidPtr->CurrentOrder().OrderId(), bidPrice);
                 spdlog::info("sell order {}  filled @ {} pence", askPtr->CurrentOrder().OrderId(), bidPrice);
                 ordersMatched_ += askPtr->CurrentOrder().CurrentQuantity();
@@ -393,7 +423,7 @@ MatchResult OrderBook::Match()
             {
                 askPtr->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
                 bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
-                md_adapter_->notify_price_level_change(askPrice, askQty - bidQty, askQty, false);
+                md_adapter_.notify_price_level_change(askPrice, askQty - bidQty, askQty, false);
                 spdlog::info("sell order {} partially filled @ {} pence", askPtr->CurrentOrder().OrderId(),
                              bidPrice);
                 spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
@@ -422,3 +452,6 @@ MatchResult OrderBook::Match()
     }
     return {};
 }
+
+template class OrderBook<mdfeed::NullMarketDataPublisher>;
+template class OrderBook<mdfeed::MarketDataPublisher>;

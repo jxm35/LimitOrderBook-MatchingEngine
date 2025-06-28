@@ -10,7 +10,6 @@
 #include "OrderBookEntry.h"
 #include "MatchResult.h"
 #include "Security.h"
-#include "publisher/DeltaGenerator.h"
 #include "publisher/MDAdapter.h"
 
 class OrderBookSpread
@@ -36,12 +35,13 @@ public:
     }
 };
 
+template <typename MarketDataPublisher>
 class OrderBook
 {
 private:
     Security instrument_;
     long ordersMatched_;
-    std::unique_ptr<mdfeed::MDAdapter> md_adapter_;
+    mdfeed::MDAdapter<MarketDataPublisher> md_adapter_;
 
     // sorted maps
     // limits could also be implemented as an array with pointers to the best bid and ask limit.
@@ -66,7 +66,7 @@ private:
                 std::unordered_map<long, std::shared_ptr<OrderBookEntry>>& internalOrderBook);
 
 public:
-    OrderBook(const Security& instrument, std::unique_ptr<mdfeed::DeltaGenerator>);
+    OrderBook(const Security& instrument, mdfeed::MDAdapter<MarketDataPublisher> mdAdapter);
 
     size_t Count();
 
@@ -108,12 +108,4 @@ public:
     }
 
     MatchResult Match();
-
-    void set_market_data_generator(std::unique_ptr<mdfeed::DeltaGenerator> generator)
-    {
-        if (md_adapter_)
-        {
-            md_adapter_->set_delta_generator(std::move(generator));
-        }
-    }
 };
