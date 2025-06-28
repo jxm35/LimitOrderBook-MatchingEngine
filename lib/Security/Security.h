@@ -10,6 +10,9 @@ private:
 public:
     Security(const std::string &&name, const std::string &&ticker, int securityId);
 
+    [[nodiscard]] int GetSecurityId() const {
+        return securityId_;
+    }
 };
 
 
