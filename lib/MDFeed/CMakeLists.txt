@@ -5,11 +5,16 @@ set(HEADER_FILES
         include/publisher/MulticastPublisher.h
         include/publisher/MarketDataPublisher.h
         include/publisher/MDAdapter.h
+        include/publisher/MulticastPublisherThread.h
+        include/receiver/ReceiverConfig.h
+        include/receiver/MulticastReceiver.h
 )
 
 set(SOURCE_FILES
         src/publisher/MulticastPublisher.cpp
         src/publisher/MarketDataPublisher.cpp
+        src/publisher/MulticastPublisherThread.cpp
+        src/receiver/MulticastReceiver.cpp
 )
 
 add_library(MDFeed STATIC ${SOURCE_FILES} ${HEADER_FILES})

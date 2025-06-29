@@ -3,6 +3,7 @@
 #include "messages/Messages.h"
 #include "utils/RingBuffer.h"
 #include "utils/PublisherConfig.h"
+#include <memory>
 
 namespace mdfeed
 {
@@ -10,9 +11,6 @@ namespace mdfeed
     class MarketDataPublisherBase
     {
     public:
-        void start() { static_cast<Derived*>(this)->start(); }
-        void stop() { static_cast<Derived*>(this)->stop(); }
-
         bool publish_price_level_update(uint32_t instrument_id, uint64_t price,
                                         uint64_t quantity, Side side, UpdateAction action)
         {
@@ -42,7 +40,7 @@ namespace mdfeed
     private:
         PublisherConfig config_;
         std::unique_ptr<MDRingBuffer> ring_buffer_;
-        std::atomic<uint64_t> sequence_number_{1};
+        uint64_t sequence_number_{1};
 
         template <typename T>
         bool enqueue_message(const T& message)
@@ -55,26 +53,16 @@ namespace mdfeed
         explicit MarketDataPublisher(const PublisherConfig& config = PublisherConfig{});
         ~MarketDataPublisher();
 
-        void start();
-        void stop();
-
         bool publish_price_level_update(uint32_t, uint64_t, uint64_t, Side, UpdateAction);
         bool publish_price_level_delete(uint32_t, uint64_t, Side);
         bool publish_trade(uint32_t, uint64_t, uint64_t, uint64_t, Side);
         bool publish_book_clear(uint32_t, uint32_t);
+        MDRingBuffer* get_ring_buffer() const;
     };
 
     class NullMarketDataPublisher : public MarketDataPublisherBase<NullMarketDataPublisher>
     {
     public:
-        void start()
-        {
-        }
-
-        void stop()
-        {
-        }
-
         bool publish_price_level_update(uint32_t, uint64_t, uint64_t, Side, UpdateAction) { return true; }
         bool publish_price_level_delete(uint32_t, uint64_t, Side) { return true; }
         bool publish_trade(uint32_t, uint64_t, uint64_t, uint64_t, Side) { return true; }
