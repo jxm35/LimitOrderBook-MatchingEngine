@@ -8,7 +8,7 @@ target_link_libraries(exchange
         OrderBookEntry
         Security
         MatchResult
-)
+        )
 
 add_executable(client client/main.cpp)
 target_link_libraries(client MDFeed)
