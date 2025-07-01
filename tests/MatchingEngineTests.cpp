@@ -1,17 +1,25 @@
 #include <gtest/gtest.h>
 #include <boost/optional/optional_io.hpp>
 
-#include <chrono>
 #include <iostream>
 #include <random>
 
-#include "OrderBook.h"
+#include "core/OrderBook.h"
+#include "publisher/MarketDataPublisher.h"
+
+static OrderBook<mdfeed::NullMarketDataPublisher> createOrderBook() {
+    const int SECURITY_ID = 1;
+    Security apl("apple", "AAPL", SECURITY_ID);
+    mdfeed::NullMarketDataPublisher publisher = mdfeed::NullMarketDataPublisher();
+    mdfeed::MDAdapter mdAdapter(SECURITY_ID, publisher);
+    return {apl, mdAdapter};
+}
 
 TEST(OrderBookTests, CanMatchCrossedSpreadEqualQuantity) {
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
-    OrderBook book(apl);
+    auto book = createOrderBook();
     Order bid(OrderCore(USERNAME, SECURITY_ID), 51, 20, true);
     Order ask(OrderCore(USERNAME, SECURITY_ID), 49, 20, false);
     book.AddOrder(bid);
@@ -29,7 +37,7 @@ TEST(OrderBookTests, CanMatchCrossedSpreadMoreBids) {
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
-    OrderBook book(apl);
+    auto book = createOrderBook();
     Order bid(OrderCore(USERNAME, SECURITY_ID), 51, 20, true);
     Order ask(OrderCore(USERNAME, SECURITY_ID), 49, 15, false);
     book.AddOrder(bid);
@@ -47,7 +55,7 @@ TEST(OrderBookTests, CanMatchCrossedSpreadMoreAsks) {
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
-    OrderBook book(apl);
+    auto book = createOrderBook();
     Order bid(OrderCore(USERNAME, SECURITY_ID), 51, 15, true);
     Order ask(OrderCore(USERNAME, SECURITY_ID), 49, 20, false);
     book.AddOrder(bid);
@@ -65,7 +73,7 @@ TEST(OrderBookTests, DoesntMatchInsufficientBids) {
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
-    OrderBook book(apl);
+    auto book = createOrderBook();
     Order bid(OrderCore(USERNAME, SECURITY_ID), 49, 15, true);
     Order ask(OrderCore(USERNAME, SECURITY_ID), 51, 20, false);
     book.AddOrder(bid);
@@ -97,7 +105,7 @@ TEST(OrderBookTests, BenchmarkPerformance) {
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
-    OrderBook book(apl);
+    auto book = createOrderBook();
 
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < 50000; i++) {
@@ -127,7 +135,7 @@ TEST(OrderBookTests, TestRandSimluation) {
     boolDist(generator_);
 
     Security apl("apple", "AAPL", SECURITY_ID);
-    OrderBook book(apl);
+    auto book = createOrderBook();
 
     Order firstBid(OrderCore(USERNAME, SECURITY_ID), 499, quantityDist(generator_), true);
     Order firstAsk(OrderCore(USERNAME, SECURITY_ID), 500, quantityDist(generator_), false);

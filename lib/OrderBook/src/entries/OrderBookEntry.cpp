@@ -1,5 +1,5 @@
 
-#include "OrderBookEntry.h"
+#include "entries/OrderBookEntry.h"
 
 OrderBookEntry::OrderBookEntry(std::shared_ptr<Limit> parentLimit, Order currentOrder)
         : currentOrder_(currentOrder) {
@@ -65,7 +65,7 @@ std::expected<void, std::string> Limit::RemoveOrder(long orderId, uint32_t quant
 }
 
 std::list<OrderStruct> Limit::GetOrderRecords() const {
-    std::list < OrderStruct > orderRecords;
+    std::list<OrderStruct> orderRecords;
     auto entryPtr = head_;
     uint32_t queuePosition = 0;
     while (entryPtr) {

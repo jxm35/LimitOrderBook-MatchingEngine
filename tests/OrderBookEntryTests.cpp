@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include "order.h"
-#include "Security.h"
-#include "OrderBookEntry.h"
+#include "orders/Order.h"
+#include "securities/Security.h"
+#include "entries/OrderBookEntry.h"
 
 TEST(OrderBookTests, OrderBookEntry) {
     Security sec("name", "code", 1);

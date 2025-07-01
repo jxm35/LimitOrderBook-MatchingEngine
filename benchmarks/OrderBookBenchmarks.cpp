@@ -1,17 +1,16 @@
 #include <benchmark/benchmark.h>
 #include <random>
-#include "Security.h"
-#include "OrderBook.h"
+#include "securities/Security.h"
+#include "core/OrderBook.h"
 #include "publisher/MarketDataPublisher.h"
 #include "spdlog/spdlog.h"
 
-static OrderBook<mdfeed::NullMarketDataPublisher> createOrderBook()
-{
+static OrderBook<mdfeed::NullMarketDataPublisher> createOrderBook() {
     const int SECURITY_ID = 1;
     Security apl("apple", "AAPL", SECURITY_ID);
     mdfeed::NullMarketDataPublisher publisher = mdfeed::NullMarketDataPublisher();
     mdfeed::MDAdapter mdAdapter(SECURITY_ID, publisher);
-    return OrderBook(apl, mdAdapter);
+    return {apl, mdAdapter};
 }
 
 // static OrderBook<mdfeed::MarketDataPublisher> createOrderBook()
@@ -20,39 +19,35 @@ static OrderBook<mdfeed::NullMarketDataPublisher> createOrderBook()
 //     Security apl("apple", "AAPL", SECURITY_ID);
 //     mdfeed::MarketDataPublisher publisher = mdfeed::MarketDataPublisher();
 //     mdfeed::MDAdapter mdAdapter(SECURITY_ID, publisher);
-//     return OrderBook(apl, mdAdapter);
+//     return {apl, mdAdapter};
 // }
 
-static void BM_PlaceMarketOrder(benchmark::State& state)
-{
+static void BM_PlaceMarketOrder(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const std::string USERNAME = "test";
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
         auto start = std::chrono::high_resolution_clock::now();
         book.PlaceMarketSellOrder(50);
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_PlaceMarketOrderAcross3Bids(benchmark::State& state)
-{
+static void BM_PlaceMarketOrderAcross3Bids(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
@@ -61,23 +56,21 @@ static void BM_PlaceMarketOrderAcross3Bids(benchmark::State& state)
         book.PlaceMarketSellOrder(125);
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Get_Order(benchmark::State& state)
-{
+static void BM_Get_Order(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         Order bid(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(bid);
@@ -85,23 +78,21 @@ static void BM_Get_Order(benchmark::State& state)
         book.ContainsOrder(bid.OrderId());
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Get_Best_Bid(benchmark::State& state)
-{
+static void BM_Get_Best_Bid(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         Order bid(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(bid);
@@ -109,23 +100,21 @@ static void BM_Get_Best_Bid(benchmark::State& state)
         book.GetBestBidPrice();
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Add_Order_Existing_Limit(benchmark::State& state)
-{
+static void BM_Add_Order_Existing_Limit(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         book.AddOrder(Order(OrderCore(USERNAME, 1), 500, 100, true));
         Order bid(OrderCore(USERNAME, 1), 500, 100, true);
@@ -133,70 +122,64 @@ static void BM_Add_Order_Existing_Limit(benchmark::State& state)
         book.AddOrder(bid);
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Add_Order_New_Limit(benchmark::State& state)
-{
+static void BM_Add_Order_New_Limit(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         Order bid(Order(OrderCore(USERNAME, 1), 500, 100, true));
         auto start = std::chrono::high_resolution_clock::now();
         book.AddOrder(bid);
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Remove_Order(benchmark::State& state)
-{
+static void BM_Remove_Order(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         Order order = Order(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(order);
         auto start = std::chrono::high_resolution_clock::now();
-        book.RemoveOrder(order);
+        book.RemoveOrder(order.OrderId());
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Match_UnCrossed_Orders(benchmark::State& state)
-{
+static void BM_Match_UnCrossed_Orders(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         Order bid = Order(OrderCore(USERNAME, 1), 500, 100, true);
         book.AddOrder(bid);
@@ -206,23 +189,21 @@ static void BM_Match_UnCrossed_Orders(benchmark::State& state)
         book.Match();
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Match_Crossed_Orders(benchmark::State& state)
-{
+static void BM_Match_Crossed_Orders(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
     Security apl("apple", "AAPL", SECURITY_ID);
     uint64_t i = 0;
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         auto book = createOrderBook();
         Order bid = Order(OrderCore(USERNAME, 1), 501, 100, true);
         book.AddOrder(bid);
@@ -233,16 +214,15 @@ static void BM_Match_Crossed_Orders(benchmark::State& state)
         book.Match();
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
         i++;
     }
     state.SetItemsProcessed(i);
 }
 
-static void BM_Run_Simulation(benchmark::State& state)
-{
+static void BM_Run_Simulation(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
@@ -263,12 +243,11 @@ static void BM_Run_Simulation(benchmark::State& state)
 
     uint64_t i = 0;
 
-    for (auto _ : state)
-    {
+    for (auto _: state) {
         long bestBid = book.GetBestBidPrice().get_value_or(lastBid);
         long bestAsk = book.GetBestAskPrice().get_value_or(lastAsk);
         long MIN_DEVIANCE = 1 + rand() % (bestAsk - bestBid);
-        double midPrice = (bestAsk + bestBid) / (double)2;
+        double midPrice = (bestAsk + bestBid) / (double) 2;
         // 2 limit orders
         double bidMean = (bestBid + midPrice) / 2;
         double askMean = (bestAsk + midPrice) / 2;
@@ -279,42 +258,31 @@ static void BM_Run_Simulation(benchmark::State& state)
         double quantity = quantityDist(generator_);
 
         auto start = std::chrono::high_resolution_clock::now();
-        for (int j = 0; j < 2; j++)
-        {
-            if (midPrice - priceDouble < MIN_DEVIANCE && priceDouble - midPrice < MIN_DEVIANCE)
-            {
+        for (int j = 0; j < 2; j++) {
+            if (midPrice - priceDouble < MIN_DEVIANCE && priceDouble - midPrice < MIN_DEVIANCE) {
                 bool isBuy = boolDist(generator_);
                 isBuy
-                    ? book.PlaceMarketBuyOrder(quantityDist(generator_) / 2)
-                    : book.PlaceMarketSellOrder(
+                ? book.PlaceMarketBuyOrder(quantityDist(generator_) / 2)
+                : book.PlaceMarketSellOrder(
                         quantityDist(generator_) / 2);
                 i++;
-            }
-            else if (price > bestAsk)
-            {
+            } else if (price > bestAsk) {
                 Order ask(OrderCore(USERNAME, SECURITY_ID), price, quantity, false);
                 book.AddOrder(ask);
                 lastAsk = price + 3;
                 i++;
-            }
-            else if (price < bestBid)
-            {
+            } else if (price < bestBid) {
                 Order bid(OrderCore(USERNAME, SECURITY_ID), price, quantity, true);
                 book.AddOrder(bid);
                 lastBid = price - 3;
                 i++;
-            }
-            else
-            {
-                if (price < midPrice)
-                {
+            } else {
+                if (price < midPrice) {
                     Order bid(OrderCore(USERNAME, SECURITY_ID), price, quantity, true);
                     book.AddOrder(bid);
                     lastBid = price - 3;
                     i++;
-                }
-                else if (price > midPrice)
-                {
+                } else if (price > midPrice) {
                     Order ask(OrderCore(USERNAME, SECURITY_ID), price, quantity, false);
                     book.AddOrder(ask);
                     lastAsk = price + 3;
@@ -328,8 +296,8 @@ static void BM_Run_Simulation(benchmark::State& state)
         book.Match();
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                end - start);
+                std::chrono::duration_cast<std::chrono::duration<double>>(
+                        end - start);
         state.SetIterationTime(elapsed_seconds.count());
     }
     state.SetItemsProcessed(i);
