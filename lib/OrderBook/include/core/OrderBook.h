@@ -33,7 +33,7 @@ template<typename MarketDataPublisher>
 class OrderBook {
 private:
     Security instrument_;
-    long ordersMatched_;
+    long matchedQuantity_;
     mdfeed::MDAdapter<MarketDataPublisher> md_adapter_;
 
     // sorted maps
@@ -48,15 +48,11 @@ private:
     std::unordered_map<long, std::shared_ptr<OrderBookEntry>> orders_;
     // could add a map price -> limit to enable efficient finding of orders @ price.
 
-    template<typename sort>
-    static void AddOrder(Order order, long price, std::map<long, std::shared_ptr<Limit>, sort> &limitLevels,
-                         std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &internalOrderBook);
+    template<typename Sort>
+    void AddOrder(Order order, long price, std::map<long, std::shared_ptr<Limit>, Sort> &limitLevels,
+                  std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &internalOrderBook);
 
-    template<typename sort>
-    static void
-    RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry> &obe,
-                std::map<long, std::shared_ptr<Limit>, sort> &limitLevels,
-                std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &internalOrderBook);
+    bool RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry> &obe);
 
 public:
     OrderBook(const Security &instrument, mdfeed::MDAdapter<MarketDataPublisher> mdAdapter);
@@ -96,8 +92,9 @@ public:
     std::list<OrderStruct> GetOrders();
 
     long GetOrdersMatched() const {
-        return ordersMatched_;
+        return matchedQuantity_;
     }
 
-    bool Match();
+    template<typename LimitMap>
+    uint32_t TryMatch(Order &incomingOrder, long price, LimitMap &opposingLimits);
 };

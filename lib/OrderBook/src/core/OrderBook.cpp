@@ -15,7 +15,7 @@ OrderBook<MarketDataPublisher>::OrderBook(const Security &instrument,
     askLimits_ = std::map<long, std::shared_ptr<Limit>, std::less<>>();
     bidLimits_ = std::map<long, std::shared_ptr<Limit>, std::greater<>>();
     orders_ = std::unordered_map<long, std::shared_ptr<OrderBookEntry>>();
-    ordersMatched_ = 0;
+    matchedQuantity_ = 0;
 }
 
 template<typename MarketDataPublisher>
@@ -92,9 +92,15 @@ template<typename MarketDataPublisher>
 void OrderBook<MarketDataPublisher>::RemoveOrder(const long orderId) {
     if (orders_.contains(orderId)) {
         auto obe = orders_.at(orderId);
-        obe->CurrentOrder().IsBuy()
-        ? RemoveOrder(orderId, obe, bidLimits_, orders_)
-        : RemoveOrder(orderId, obe, askLimits_, orders_);
+        const bool isBuy = obe->CurrentOrder().IsBuy();
+        const long price = obe->CurrentOrder().Price();
+        if (RemoveOrder(orderId, obe)) {
+            if (isBuy) {
+                bidLimits_.erase(price);
+            } else {
+                askLimits_.erase(price);
+            }
+        }
     } else {
         throw std::invalid_argument("order id not found");
     }
@@ -169,42 +175,42 @@ std::list<OrderStruct> OrderBook<MarketDataPublisher>::GetOrders() {
 }
 
 template<typename MarketDataPublisher>
-template<typename sort>
+template<typename Sort>
 void OrderBook<MarketDataPublisher>::AddOrder(Order order, long price,
-                                              std::map<long, std::shared_ptr<Limit>, sort> &limitLevels,
-                                              std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &
-                                              internalOrderBook) {
-    auto orderId = order.OrderId();
-    auto lim = limitLevels.find(price);
-    if (lim != limitLevels.end()) {
-        auto orderBookEntry = std::make_shared<OrderBookEntry>(lim->second, order);
-        lim->second->AddOrder(orderBookEntry);
-        internalOrderBook[orderId] = orderBookEntry;
+                                              std::map<long, std::shared_ptr<Limit>, Sort> &limitLevels,
+                                              std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &internalOrderBook) {
+    if (order.IsBuy()) {
+        this->TryMatch(order, price, askLimits_);
     } else {
-        auto limit = std::make_shared<Limit>(price);
-        auto orderBookEntry = std::make_shared<OrderBookEntry>(limit, order);
-        limit->AddOrder(orderBookEntry);
-        limitLevels[price] = limit;
-        internalOrderBook[orderId] = orderBookEntry;
+        this->TryMatch(order, price, bidLimits_);
     }
+    if (order.CurrentQuantity() == 0) {
+        return;
+    }
+    auto it = limitLevels.find(price);
+    std::shared_ptr<Limit> limit;
+    if (it != limitLevels.end()) {
+        limit = it->second;
+    } else {
+        limit = std::make_shared<Limit>(price);
+        limitLevels[price] = limit;
+    }
+    auto entry = std::make_shared<OrderBookEntry>(limit, order);
+    limit->AddOrder(entry);
+    internalOrderBook[order.OrderId()] = entry;
 }
 
 template<typename MarketDataPublisher>
-template<typename sort>
-void OrderBook<MarketDataPublisher>::RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry> &obe,
-                                                 std::map<long, std::shared_ptr<Limit>, sort> &limitLevels,
-                                                 std::unordered_map<long, std::shared_ptr<OrderBookEntry>> &
-                                                 internalOrderBook) {
+bool OrderBook<MarketDataPublisher>::RemoveOrder(long orderId, const std::shared_ptr<OrderBookEntry> &obe) {
     auto limit = obe->GetLimit();
     if (!limit) {
-        internalOrderBook.erase(orderId);
-        return;
+        orders_.erase(orderId);
+        return false;
     }
 
     if (limit->GetOrderCount() == 1) {
-        limitLevels.erase(obe->CurrentOrder().Price());
-        internalOrderBook.erase(orderId);
-        return;
+        orders_.erase(orderId);
+        return true;
     }
 
     auto prev = obe->previous.lock();
@@ -220,151 +226,97 @@ void OrderBook<MarketDataPublisher>::RemoveOrder(long orderId, const std::shared
     }
 
     limit->RemoveOrder(obe->CurrentOrder().OrderId(), obe->CurrentOrder().CurrentQuantity());
-    internalOrderBook.erase(orderId);
+    orders_.erase(orderId);
+    return false;
 }
 
 template<typename MarketDataPublisher>
 void OrderBook<MarketDataPublisher>::PlaceMarketBuyOrder(uint32_t quantity) {
-    std::list<std::shared_ptr<OrderBookEntry>> toRemove;
     if (askLimits_.empty()) {
+        spdlog::info("No asks available to fill market buy order");
         return;
     }
-    for (std::pair<long, std::shared_ptr<Limit>> limit: askLimits_) {
-        auto askPtr = limit.second->head_;
-        while (askPtr != nullptr) {
-            if (quantity == askPtr->CurrentOrder().CurrentQuantity()) {
-                spdlog::info("market buy order filled @ {} pence", limit.first);
-                spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
-                             limit.first);
-                toRemove.push_back(askPtr);
-                ordersMatched_ += quantity;
-                quantity = 0;
-                break;
-            } else if (quantity < askPtr->CurrentOrder().CurrentQuantity()) {
-                askPtr->DecreaseQuantity(quantity);
-                spdlog::info("market buy order filled @ {} pence", limit.first);
-                spdlog::info("sell order {} partially filled @ {} pence", askPtr->CurrentOrder().OrderId(),
-                             limit.first);
-                ordersMatched_ += quantity;
-                quantity = 0;
-                break;
-            } else {
-                quantity -= askPtr->CurrentOrder().CurrentQuantity();
-                spdlog::info("market buy order partially filled @ {} pence", limit.first);
-                spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
-                             limit.first);
-                toRemove.push_back(askPtr);
-                ordersMatched_ += askPtr->CurrentOrder().CurrentQuantity();
-                askPtr = askPtr->next;
-            }
-        }
-        if (askLimits_.empty() || quantity == 0) {
-            break;
-        }
-    }
-    for (const auto &obe: toRemove) {
-        RemoveOrder(obe->CurrentOrder().OrderId(), obe, askLimits_, orders_);
+
+    Order marketOrder{{"username", 1}, std::numeric_limits<long>::max(), quantity, true};
+    const uint32_t remaining = TryMatch(marketOrder, marketOrder.Price(), askLimits_);
+    if (remaining > 0) {
+        spdlog::info("Market buy order partially filled, {} units remaining unfilled", remaining);
+    } else {
+        spdlog::info("Market buy order completely filled");
     }
 }
 
 template<typename MarketDataPublisher>
 void OrderBook<MarketDataPublisher>::PlaceMarketSellOrder(uint32_t quantity) {
-    std::list<std::shared_ptr<OrderBookEntry>> toRemove;
     if (bidLimits_.empty()) {
+        spdlog::info("No bids available to fill market sell order");
         return;
     }
-    for (std::pair<long, std::shared_ptr<Limit>> limit: bidLimits_) {
-        auto bidPtr = limit.second->head_;
-        while (bidPtr != nullptr) {
-            if (quantity == bidPtr->CurrentOrder().CurrentQuantity()) {
-                spdlog::info("market sell order filled @ {} pence", limit.first);
-                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
-                             limit.first);
-                toRemove.push_back(bidPtr);
-                ordersMatched_ += quantity;
-                quantity = 0;
-                break;
-            } else if (quantity < bidPtr->CurrentOrder().CurrentQuantity()) {
-                bidPtr->DecreaseQuantity(quantity);
-                spdlog::info("market sell order filled @ {} pence", limit.first);
-                spdlog::info("buy order {} partially filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
-                             limit.first);
-                ordersMatched_ += quantity;
-                quantity = 0;
-                break;
-            } else {
-                quantity -= bidPtr->CurrentOrder().CurrentQuantity();
-                spdlog::info("market sell order partially filled @ {} pence", limit.first);
-                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
-                             limit.first);
-                toRemove.push_back(bidPtr);
-                ordersMatched_ += bidPtr->CurrentOrder().CurrentQuantity();
-                bidPtr = bidPtr->next;
-            }
-        }
-        if (bidLimits_.empty() || quantity == 0) {
-            break;
-        }
-    }
-    for (const auto &obe: toRemove) {
-        RemoveOrder(obe->CurrentOrder().OrderId(), obe, bidLimits_, orders_);
+
+    Order marketOrder{{"username", 1}, std::numeric_limits<long>::min(), quantity, false};
+    const uint32_t remaining = TryMatch(marketOrder, marketOrder.Price(), bidLimits_);
+    if (remaining > 0) {
+        spdlog::info("Market sell order partially filled, {} units remaining unfilled", remaining);
+    } else {
+        spdlog::info("Market sell order completely filled");
     }
 }
 
 template<typename MarketDataPublisher>
-bool OrderBook<MarketDataPublisher>::Match() {
-    if (bidLimits_.empty() || askLimits_.empty()) {
-        return {};
-    }
-    auto bestBid = bidLimits_.begin()->second;
-    auto bestAsk = askLimits_.begin()->second;
-    long bidPrice = bestBid->Price();
-    long askPrice = bestAsk->Price();
-    if (bidPrice >= askPrice) {
-        auto bidPtr = bestBid->head_;
-        auto askPtr = bestAsk->head_;
-        while (bidPtr != nullptr && askPtr != nullptr) {
-            const uint32_t askQty = askPtr->CurrentOrder().CurrentQuantity();
-            const uint32_t bidQty = bidPtr->CurrentOrder().CurrentQuantity();
-            if (bidPtr->CurrentOrder().CurrentQuantity() > askPtr->CurrentOrder().CurrentQuantity()) {
-                bidPtr->DecreaseQuantity(askQty);
-                bestBid->DecreaseQuantity(askQty); // TODO: Move delta notification to here
-                md_adapter_.notify_price_level_change(bidPrice, bidQty - askQty, bidQty, true);
-                spdlog::info("buy order {} partially filled @ {} pence", bidPtr->CurrentOrder().OrderId(), bidPrice);
-                spdlog::info("sell order {}  filled @ {} pence", askPtr->CurrentOrder().OrderId(), bidPrice);
-                ordersMatched_ += askPtr->CurrentOrder().CurrentQuantity();
-                auto next = askPtr->next;
-                RemoveOrder(askPtr->CurrentOrder().OrderId(), askPtr, askLimits_, orders_);
-                askPtr = next;
-            } else if (bidPtr->CurrentOrder().CurrentQuantity() < askPtr->CurrentOrder().CurrentQuantity()) {
-                askPtr->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
-                bestAsk->DecreaseQuantity(bidPtr->CurrentOrder().CurrentQuantity());
-                md_adapter_.notify_price_level_change(askPrice, askQty - bidQty, askQty, false);
-                spdlog::info("sell order {} partially filled @ {} pence", askPtr->CurrentOrder().OrderId(),
-                             bidPrice);
-                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
-                             bidPrice);
-                ordersMatched_ += bidPtr->CurrentOrder().CurrentQuantity();
-                auto next = bidPtr->next;
-                RemoveOrder(bidPtr->CurrentOrder().OrderId(), bidPtr, bidLimits_, orders_);
-                bidPtr = next;
+template<typename LimitMap>
+uint32_t OrderBook<MarketDataPublisher>::TryMatch(Order &incomingOrder, long price, LimitMap &opposingLimits) {
+    const bool isBuy = incomingOrder.IsBuy();
+    auto opposingIter = opposingLimits.begin();
+    uint32_t remainingQty = incomingOrder.CurrentQuantity();
+    bool erasedLimit = false;
+    while (opposingIter != opposingLimits.end() && remainingQty > 0) {
+        long opposingPrice = opposingIter->first;
+
+        if ((isBuy && price < opposingPrice) ||
+            (!isBuy && price > opposingPrice)) { // TODO: replace with side sign comparison
+            break;
+        }
+
+        auto limit = opposingIter->second;
+        auto opposingOrderPtr = limit->head_;
+        while (opposingOrderPtr && remainingQty > 0) {
+            auto &restingOrder = opposingOrderPtr->CurrentOrder();
+            const uint32_t restingQty = restingOrder.CurrentQuantity();
+            const uint32_t matchedQty = std::min(restingQty, remainingQty);
+
+            opposingOrderPtr->DecreaseQuantity(matchedQty);
+            limit->DecreaseQuantity(matchedQty);
+            md_adapter_.notify_price_level_change(opposingPrice, restingQty - matchedQty, restingQty,
+                                                  !isBuy); // TODO: This should happen within the limit
+
+            spdlog::debug("{} order {} {}filled @ {} pence", isBuy ? "buy" : "sell", incomingOrder.OrderId(),
+                          matchedQty < remainingQty ? "partially " : "", opposingPrice);
+            spdlog::debug("{} order {} {}filled @ {} pence", isBuy ? "sell" : "buy", restingOrder.OrderId(),
+                          matchedQty < restingQty ? "partially " : "", opposingPrice);
+
+            matchedQuantity_ += matchedQty;
+            remainingQty -= matchedQty;
+            incomingOrder.DecreaseQuantity(matchedQty);
+
+            if (restingOrder.CurrentQuantity() == 0) {
+                auto next = opposingOrderPtr->next;
+                if (RemoveOrder(restingOrder.OrderId(), opposingOrderPtr)) {
+                    opposingIter = opposingLimits.erase(opposingIter);
+                    erasedLimit = true;
+                }
+                opposingOrderPtr = next;
+                continue;
             } else {
-                spdlog::info("sell order {} filled @ {} pence", askPtr->CurrentOrder().OrderId(),
-                             bidPrice);
-                spdlog::info("buy order {} filled @ {} pence", bidPtr->CurrentOrder().OrderId(),
-                             bidPrice);
-                // remove bidPtr + askPtr;
-                ordersMatched_ += askPtr->CurrentOrder().CurrentQuantity();
-                auto next = askPtr->next;
-                RemoveOrder(askPtr->CurrentOrder().OrderId(), askPtr, askLimits_, orders_);
-                askPtr = next;
-                next = bidPtr->next;
-                RemoveOrder(bidPtr->CurrentOrder().OrderId(), bidPtr, bidLimits_, orders_);
-                bidPtr = next;
+                break;
             }
         }
+        if (!erasedLimit) {
+            ++opposingIter;
+        } else {
+            erasedLimit = false;
+        }
     }
-    return {};
+    return remainingQty;
 }
 
 template

@@ -173,31 +173,7 @@ static void BM_Remove_Order(benchmark::State &state) {
     state.SetItemsProcessed(i);
 }
 
-static void BM_Match_UnCrossed_Orders(benchmark::State &state) {
-    spdlog::set_level(spdlog::level::err);
-    const int SECURITY_ID = 1;
-    const std::string USERNAME = "test";
-    Security apl("apple", "AAPL", SECURITY_ID);
-    uint64_t i = 0;
-    for (auto _: state) {
-        auto book = createOrderBook();
-        Order bid = Order(OrderCore(USERNAME, 1), 500, 100, true);
-        book.AddOrder(bid);
-        Order ask = Order(OrderCore(USERNAME, 1), 501, 100, false);
-        book.AddOrder(ask);
-        auto start = std::chrono::high_resolution_clock::now();
-        book.Match();
-        auto end = std::chrono::high_resolution_clock::now();
-        auto elapsed_seconds =
-                std::chrono::duration_cast<std::chrono::duration<double>>(
-                        end - start);
-        state.SetIterationTime(elapsed_seconds.count());
-        i++;
-    }
-    state.SetItemsProcessed(i);
-}
-
-static void BM_Match_Crossed_Orders(benchmark::State &state) {
+static void BM_AddCrossing_Orders(benchmark::State &state) {
     spdlog::set_level(spdlog::level::err);
     const int SECURITY_ID = 1;
     const std::string USERNAME = "test";
@@ -208,10 +184,8 @@ static void BM_Match_Crossed_Orders(benchmark::State &state) {
         Order bid = Order(OrderCore(USERNAME, 1), 501, 100, true);
         book.AddOrder(bid);
         Order ask = Order(OrderCore(USERNAME, 1), 500, 100, false);
-        book.AddOrder(ask);
-
         auto start = std::chrono::high_resolution_clock::now();
-        book.Match();
+        book.AddOrder(ask);
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
                 std::chrono::duration_cast<std::chrono::duration<double>>(
@@ -293,7 +267,6 @@ static void BM_Run_Simulation(benchmark::State &state) {
             price = round(priceDouble);
         }
 
-        book.Match();
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed_seconds =
                 std::chrono::duration_cast<std::chrono::duration<double>>(
@@ -312,7 +285,6 @@ BENCHMARK(BM_Run_Simulation)->UseManualTime();
 BENCHMARK(BM_Add_Order_New_Limit)->UseManualTime();
 BENCHMARK(BM_Add_Order_Existing_Limit)->UseManualTime();
 BENCHMARK(BM_Remove_Order)->UseManualTime();
-BENCHMARK(BM_Match_UnCrossed_Orders)->UseManualTime();
-BENCHMARK(BM_Match_Crossed_Orders)->UseManualTime();
+BENCHMARK(BM_AddCrossing_Orders)->UseManualTime();
 
 BENCHMARK_MAIN();

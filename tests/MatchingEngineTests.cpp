@@ -24,7 +24,6 @@ TEST(OrderBookTests, CanMatchCrossedSpreadEqualQuantity) {
     Order ask(OrderCore(USERNAME, SECURITY_ID), 49, 20, false);
     book.AddOrder(bid);
     book.AddOrder(ask);
-    book.Match();
     EXPECT_FALSE(book.ContainsOrder(bid.OrderId()));
     EXPECT_FALSE(book.ContainsOrder(ask.OrderId()));
     EXPECT_EQ(book.Count(), 0);
@@ -42,7 +41,6 @@ TEST(OrderBookTests, CanMatchCrossedSpreadMoreBids) {
     Order ask(OrderCore(USERNAME, SECURITY_ID), 49, 15, false);
     book.AddOrder(bid);
     book.AddOrder(ask);
-    book.Match();
     EXPECT_TRUE(book.ContainsOrder(bid.OrderId()));
     EXPECT_FALSE(book.ContainsOrder(ask.OrderId()));
     EXPECT_EQ(book.Count(), 1);
@@ -60,7 +58,6 @@ TEST(OrderBookTests, CanMatchCrossedSpreadMoreAsks) {
     Order ask(OrderCore(USERNAME, SECURITY_ID), 49, 20, false);
     book.AddOrder(bid);
     book.AddOrder(ask);
-    book.Match();
     EXPECT_FALSE(book.ContainsOrder(bid.OrderId()));
     EXPECT_TRUE(book.ContainsOrder(ask.OrderId()));
     EXPECT_EQ(book.Count(), 1);
@@ -78,7 +75,6 @@ TEST(OrderBookTests, DoesntMatchInsufficientBids) {
     Order ask(OrderCore(USERNAME, SECURITY_ID), 51, 20, false);
     book.AddOrder(bid);
     book.AddOrder(ask);
-    book.Match();
     EXPECT_TRUE(book.ContainsOrder(bid.OrderId()));
     EXPECT_TRUE(book.ContainsOrder(ask.OrderId()));
     EXPECT_EQ(book.Count(), 2);
@@ -111,10 +107,8 @@ TEST(OrderBookTests, BenchmarkPerformance) {
     for (int i = 0; i < 50000; i++) {
         Order bid(OrderCore(USERNAME, SECURITY_ID), buys[i], quantities[i], true);
         book.AddOrder(bid);
-        book.Match();
         Order ask(OrderCore(USERNAME, SECURITY_ID), sells[i], quantities[i], false);
         book.AddOrder(ask);
-        book.Match();
     }
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -169,8 +163,6 @@ TEST(OrderBookTests, TestRandSimluation) {
         bool isBuy = boolDist(generator_);
         Order order(OrderCore(USERNAME, SECURITY_ID), isBuy ? bestAsk : bestBid, quantityDist(generator_), isBuy);
         book.AddOrder(order);
-
-        book.Match();
     }
 
     auto end = std::chrono::high_resolution_clock::now();

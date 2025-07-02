@@ -2,8 +2,6 @@
 
 #include "OrderCore.h"
 
-class Order;
-
 class Order : public OrderCore {
 private:
     long price_{};
@@ -35,6 +33,6 @@ public:
 
     friend class OrderBookEntry;
 
-protected:
     void DecreaseQuantity(uint32_t quantity);
 };
+
