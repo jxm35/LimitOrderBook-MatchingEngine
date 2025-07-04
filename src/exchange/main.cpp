@@ -5,26 +5,23 @@
 #include <csignal>
 #include <memory>
 
-#include "OrderBook.h"
-#include "Security.h"
-#include "order.h"
+#include "core/OrderBook.h"
+#include "securities/Security.h"
+#include "orders/Order.h"
 #include "publisher/MarketDataPublisher.h"
 #include "publisher/MulticastPublisherThread.h"
 #include "utils/PublisherConfig.h"
 
-namespace
-{
+namespace {
     std::atomic running{true};
 
-    void signal_handler(const int signal)
-    {
+    void signal_handler(const int signal) {
         std::cout << "\nReceived signal " << signal << ", shutting down exchange..." << std::endl;
         running.store(false);
     }
 }
 
-class ExchangeSimulator
-{
+class ExchangeSimulator {
 private:
     static constexpr int SECURITY_ID = 1;
     static constexpr auto USERNAME = "simulator";
@@ -44,28 +41,21 @@ private:
     long last_ask_price_{};
 
 public:
-    explicit ExchangeSimulator(const mdfeed::PublisherConfig& config)
-        : md_publisher_(std::make_unique<mdfeed::MarketDataPublisher>(config))
-          , multicast_thread_(
-              std::make_unique<mdfeed::MulticastPublisherThread>(md_publisher_->get_ring_buffer(), config))
-          , md_adapter_(std::make_unique<mdfeed::MDAdapter<mdfeed::MarketDataPublisher>>(SECURITY_ID, *md_publisher_))
-          , generator_(rd_())
-          , price_dist_(50000, 500)
-          , quantity_dist_(100, 20)
-          , bool_dist_(0.5)
-          , last_bid_price_(49800)
-    {
+    explicit ExchangeSimulator(const mdfeed::PublisherConfig &config)
+            : md_publisher_(std::make_unique<mdfeed::MarketDataPublisher>(config)), multicast_thread_(
+            std::make_unique<mdfeed::MulticastPublisherThread>(md_publisher_->get_ring_buffer(), config)), md_adapter_(
+            std::make_unique<mdfeed::MDAdapter<mdfeed::MarketDataPublisher>>(SECURITY_ID, *md_publisher_)),
+              generator_(rd_()), price_dist_(50000, 500), quantity_dist_(100, 20), bool_dist_(0.5),
+              last_bid_price_(49800) {
         Security apple("Apple Inc", "AAPL", SECURITY_ID);
         order_book_ = std::make_unique<OrderBook<mdfeed::MarketDataPublisher>>(apple, *md_adapter_);
 
         initialize_book();
     }
 
-    void start()
-    {
+    void start() {
         std::cout << "Starting Multicast Publisher Thread..." << std::endl;
-        if (!multicast_thread_->start())
-        {
+        if (!multicast_thread_->start()) {
             throw std::runtime_error("Failed to start multicast publisher thread");
         }
 
@@ -73,8 +63,7 @@ public:
         std::cout << "Initial spread: " << last_bid_price_ / 100.0 << " - " << last_ask_price_ / 100.0 << std::endl;
     }
 
-    void stop()
-    {
+    void stop() {
         std::cout << "Stopping Multicast Publisher Thread..." << std::endl;
         multicast_thread_->stop();
 
@@ -85,31 +74,24 @@ public:
         std::cout << "  Empty polls: " << stats.ring_buffer_empty_count << std::endl;
     }
 
-    void simulate_step()
-    {
-        if (bool_dist_(generator_) && bool_dist_(generator_))
-        {
+    void simulate_step() {
+        if (bool_dist_(generator_) && bool_dist_(generator_)) {
             place_market_order();
-        }
-        else
-        {
+        } else {
             add_limit_order();
         }
-        order_book_->Match();
         print_book_status();
     }
 
 private:
-    void initialize_book()
-    {
+    void initialize_book() {
         const Order initial_bid(OrderCore(USERNAME, SECURITY_ID), last_bid_price_, 1000, true);
         const Order initial_ask(OrderCore(USERNAME, SECURITY_ID), last_ask_price_, 1000, false);
 
         order_book_->AddOrder(initial_bid);
         order_book_->AddOrder(initial_ask);
 
-        for (int i = 1; i <= 5; ++i)
-        {
+        for (int i = 1; i <= 5; ++i) {
             long bid_price = last_bid_price_ - (i * 100);
             long ask_price = last_ask_price_ + (i * 100);
             const auto quantity = static_cast<uint32_t>(std::abs(quantity_dist_(generator_)));
@@ -122,8 +104,7 @@ private:
         }
     }
 
-    void add_limit_order()
-    {
+    void add_limit_order() {
         auto best_bid = order_book_->GetBestBidPrice();
         auto best_ask = order_book_->GetBestAskPrice();
 
@@ -134,13 +115,10 @@ private:
         bool is_buy = bool_dist_(generator_);
 
         long price;
-        if (is_buy)
-        {
+        if (is_buy) {
             double target_price = (last_bid_price_ + mid_price) / 2.0;
             price = static_cast<long>(std::abs(std::normal_distribution<double>(target_price, 200)(generator_)));
-        }
-        else
-        {
+        } else {
             double target_price = (last_ask_price_ + mid_price) / 2.0;
             price = static_cast<long>(std::abs(std::normal_distribution<double>(target_price, 200)(generator_)));
         }
@@ -152,40 +130,33 @@ private:
         order_book_->AddOrder(order);
 
         std::cout << "Added " << (is_buy ? "BID" : "ASK")
-            << " order: " << quantity << " @ " << (price / 100.0) << std::endl;
+                  << " order: " << quantity << " @ " << (price / 100.0) << std::endl;
     }
 
-    void place_market_order()
-    {
+    void place_market_order() {
         auto quantity = static_cast<uint32_t>(std::abs(quantity_dist_(generator_)) / 2);
         if (quantity == 0) quantity = 1;
 
-        if (bool is_buy = bool_dist_(generator_))
-        {
+        if (bool_dist_(generator_)) {
             std::cout << "Placing market BUY order: " << quantity << std::endl;
             order_book_->PlaceMarketBuyOrder(quantity);
-        }
-        else
-        {
+        } else {
             std::cout << "Placing market SELL order: " << quantity << std::endl;
             order_book_->PlaceMarketSellOrder(quantity);
         }
     }
 
-    void print_book_status() const
-    {
+    void print_book_status() const {
         auto best_bid = order_book_->GetBestBidPrice();
         auto best_ask = order_book_->GetBestAskPrice();
         auto spread = order_book_->GetSpread();
 
         std::cout << "Book Status - Orders: " << order_book_->Count();
 
-        if (best_bid.has_value() && best_ask.has_value())
-        {
+        if (best_bid.has_value() && best_ask.has_value()) {
             std::cout << ", Best: " << (best_bid.value() / 100.0)
-                << " x " << (best_ask.value() / 100.0);
-            if (spread.Spread().has_value())
-            {
+                      << " x " << (best_ask.value() / 100.0);
+            if (spread.Spread().has_value()) {
                 std::cout << ", Spread: " << (spread.Spread().value() / 100.0);
             }
         }
@@ -194,34 +165,25 @@ private:
     }
 };
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
     mdfeed::PublisherConfig config;
 
-    for (int i = 1; i < argc; ++i)
-    {
-        if (std::string arg = argv[i]; arg == "--ip" && i + 1 < argc)
-        {
+    for (int i = 1; i < argc; ++i) {
+        if (std::string arg = argv[i]; arg == "--ip" && i + 1 < argc) {
             config.multicast_ip = argv[++i];
-        }
-        else if (arg == "--port" && i + 1 < argc)
-        {
+        } else if (arg == "--port" && i + 1 < argc) {
             config.multicast_port = static_cast<uint16_t>(std::stoul(argv[++i]));
-        }
-        else if (arg == "--interface" && i + 1 < argc)
-        {
+        } else if (arg == "--interface" && i + 1 < argc) {
             config.interface_ip = argv[++i];
-        }
-        else if (arg == "--help" || arg == "-h")
-        {
+        } else if (arg == "--help" || arg == "-h") {
             std::cout << "Usage: " << argv[0] << " [options]\n"
-                << "Options:\n"
-                << "  --ip <address>       Multicast IP address (default: " << config.multicast_ip << ")\n"
-                << "  --port <port>        Multicast port (default: " << config.multicast_port << ")\n"
-                << "  --interface <ip>     Local interface IP (default: " << config.interface_ip << ")\n"
-                << "  --help, -h           Show this help message\n";
+                      << "Options:\n"
+                      << "  --ip <address>       Multicast IP address (default: " << config.multicast_ip << ")\n"
+                      << "  --port <port>        Multicast port (default: " << config.multicast_port << ")\n"
+                      << "  --interface <ip>     Local interface IP (default: " << config.interface_ip << ")\n"
+                      << "  --help, -h           Show this help message\n";
             return 0;
         }
     }
@@ -231,21 +193,18 @@ int main(int argc, char* argv[])
     std::cout << "Interface: " << config.interface_ip << std::endl;
     std::cout << "Press Ctrl+C to stop..." << std::endl;
 
-    try
-    {
+    try {
         ExchangeSimulator exchange(config);
         exchange.start();
 
-        while (running.load())
-        {
+        while (running.load()) {
             exchange.simulate_step();
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
 
         exchange.stop();
     }
-    catch (const std::exception& e)
-    {
+    catch (const std::exception &e) {
         std::cerr << "Exchange error: " << e.what() << std::endl;
         return 1;
     }
