@@ -1,6 +1,5 @@
 project(tests)
 
-# include gTest
 include(FetchContent)
 FetchContent_Declare(
         googletest
@@ -13,5 +12,3 @@ add_executable(Tests OrderBookTests.cpp MatchingEngineTests.cpp OrderBookEntryTe
 target_link_libraries(Tests OrderBook GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(Tests)
-
-include_directories(${gtest_SOURCE_DIR}/include $gtest_SOURCE_DIR)

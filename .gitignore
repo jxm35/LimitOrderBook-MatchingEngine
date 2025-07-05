@@ -31,3 +31,12 @@ __pycache__
 *.exe
 *.out
 *.app
+
+.qt
+*.cmake
+Makefile
+CMakeFiles
+_deps
+CMakeCache.txt
+_skbuild
+*.egg-info

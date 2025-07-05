@@ -1,17 +1,26 @@
 import random
 import threading
 import time
-from typing import Optional
+from typing import Optional, Dict, List
+from dataclasses import dataclass
 
-from order_book import OrderBook
+import orderbook
+
+
+@dataclass
+class Trade:
+    price: int
+    quantity: int
+    timestamp: float
 
 
 class MarketSimulator:
-    def __init__(self, order_book: OrderBook):
-        self.order_book = order_book
+    def __init__(self, cpp_orderbook):
+        self.orderbook = cpp_orderbook
         self.running = False
         self.simulation_thread: Optional[threading.Thread] = None
 
+        self.trades: List[Trade] = []
         self.base_username = "simulator"
         self.min_deviance = 100
 
@@ -49,21 +58,32 @@ class MarketSimulator:
         pressure_thread = threading.Thread(target=self._apply_sell_pressure, daemon=True)
         pressure_thread.start()
 
+    def _track_trade(self, price: int, quantity: int):
+        self.trades.append(Trade(price, quantity, time.time()))
+
     def _apply_buy_pressure(self):
         start_time = time.time()
         while (time.time() - start_time < self.pressure_duration and
                self.running and self.buy_pressure_active):
 
             quantity = self.quantity_generator()
-            self.order_book.place_market_buy_order(quantity)
+            old_matched = self.orderbook.get_orders_matched()
+            best_ask = self.orderbook.get_best_ask_price()
+            self.orderbook.place_market_buy_order(quantity)
+            new_matched = self.orderbook.get_orders_matched()
+            if new_matched > old_matched and best_ask:
+                self._track_trade(best_ask, new_matched - old_matched)
 
-            best_bid = self.order_book.get_best_bid_price()
-            best_ask = self.order_book.get_best_ask_price()
+            best_bid = self.orderbook.get_best_bid_price()
+            best_ask = self.orderbook.get_best_ask_price()
 
             if best_bid and best_ask:
                 mid_price = (best_bid + best_ask) // 2
                 aggressive_price = mid_price + random.randint(50, 150)
-                self.order_book.add_order(aggressive_price, self.quantity_generator(), True)
+
+                order = orderbook.create_order("pressure_buyer", 1, aggressive_price,
+                                               self.quantity_generator(), True)
+                self.orderbook.add_order(order)
 
             time.sleep(0.1)
 
@@ -75,15 +95,26 @@ class MarketSimulator:
                self.running and self.sell_pressure_active):
 
             quantity = self.quantity_generator()
-            self.order_book.place_market_sell_order(quantity)
 
-            best_bid = self.order_book.get_best_bid_price()
-            best_ask = self.order_book.get_best_ask_price()
+            old_matched = self.orderbook.get_orders_matched()
+            best_bid = self.orderbook.get_best_bid_price()
+
+            self.orderbook.place_market_sell_order(quantity)
+
+            new_matched = self.orderbook.get_orders_matched()
+            if new_matched > old_matched and best_bid:
+                self._track_trade(best_bid, new_matched - old_matched)
+
+            best_bid = self.orderbook.get_best_bid_price()
+            best_ask = self.orderbook.get_best_ask_price()
 
             if best_bid and best_ask:
                 mid_price = (best_bid + best_ask) // 2
                 aggressive_price = mid_price - random.randint(50, 150)
-                self.order_book.add_order(aggressive_price, self.quantity_generator(), False)
+
+                order = orderbook.create_order("pressure_seller", 1, aggressive_price,
+                                               self.quantity_generator(), False)
+                self.orderbook.add_order(order)
 
             time.sleep(0.1)
 
@@ -92,8 +123,8 @@ class MarketSimulator:
     def _simulation_loop(self):
         while self.running:
             try:
-                best_bid = self.order_book.get_best_bid_price()
-                best_ask = self.order_book.get_best_ask_price()
+                best_bid = self.orderbook.get_best_bid_price()
+                best_ask = self.orderbook.get_best_ask_price()
 
                 if best_bid is None or best_ask is None:
                     time.sleep(0.1)
@@ -112,7 +143,7 @@ class MarketSimulator:
                 elif activity_type == 'market_order':
                     self._add_market_order()
                 elif activity_type == 'cancel':
-                    self._cancel_random_order()
+                    pass
 
                 time.sleep(0.01)
 
@@ -142,16 +173,38 @@ class MarketSimulator:
                 continue
 
             quantity = self.quantity_generator()
-            self.order_book.add_order(price, quantity, is_buy)
+            order = orderbook.create_order("sim_trader", 1, price, quantity, is_buy)
+            old_matched = self.orderbook.get_orders_matched()
+            self.orderbook.add_order(order)
+            new_matched = self.orderbook.get_orders_matched()
+
+            if new_matched > old_matched:
+                trade_qty = new_matched - old_matched
+                trade_price = best_ask if is_buy else best_bid
+                self._track_trade(trade_price, trade_qty)
 
     def _add_market_order(self):
         is_buy = random.random() < 0.5
         quantity = self.quantity_generator() // 2
 
+        old_matched = self.orderbook.get_orders_matched()
         if is_buy:
-            self.order_book.place_market_buy_order(quantity)
+            best_ask = self.orderbook.get_best_ask_price()
+            self.orderbook.place_market_buy_order(quantity)
+            trade_price = best_ask
         else:
-            self.order_book.place_market_sell_order(quantity)
+            best_bid = self.orderbook.get_best_bid_price()
+            self.orderbook.place_market_sell_order(quantity)
+            trade_price = best_bid
 
-    def _cancel_random_order(self):
-        pass
+        new_matched = self.orderbook.get_orders_matched()
+        if new_matched > old_matched and trade_price:
+            self._track_trade(trade_price, new_matched - old_matched)
+
+    def get_recent_volume(self, seconds: float = 1.0) -> int:
+        current_time = time.time()
+        recent_trades = [
+            trade for trade in self.trades
+            if current_time - trade.timestamp <= seconds
+        ]
+        return sum(trade.quantity for trade in recent_trades)

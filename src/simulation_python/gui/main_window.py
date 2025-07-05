@@ -1,4 +1,4 @@
-import sys
+import random
 import time
 from collections import deque
 from typing import Deque
@@ -9,8 +9,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLabel, QGridLayout)
 
-sys.path.append('..')
-from order_book import OrderBook
+import orderbook
 from market_simulator import MarketSimulator
 
 LINE_WIDTH = 4
@@ -42,12 +41,35 @@ class MainWindow(QMainWindow):
         self.update_timer.timeout.connect(self.update_data)
         self.update_timer.start(int(1000 / FRAME_RATE))
 
-        self.order_book = OrderBook()
+        self.security = orderbook.Security("Apple Inc", "AAPL", 1)
+        self.order_book = orderbook.OrderBook(self.security)
+        self._initialize_book()
+
         self.market_simulator = MarketSimulator(self.order_book)
         self.market_simulator.start_simulation()
 
         self.start_time = time.time()
         self.last_volume_check = 0
+
+    def _initialize_book(self):
+        base_price = 50000
+
+        initial_bid = orderbook.create_order("init_user", 1, base_price - 200, 1000, True)  # 498.00
+        initial_ask = orderbook.create_order("init_user", 1, base_price + 200, 1000, False)  # 502.00
+
+        self.order_book.add_order(initial_bid)
+        self.order_book.add_order(initial_ask)
+
+        for i in range(1, 6):
+            bid_price = base_price - 200 - (i * 100)
+            ask_price = base_price + 200 + (i * 100)
+            quantity = random.randint(100, 500)
+
+            bid_order = orderbook.create_order("init_user", 1, bid_price, quantity, True)
+            ask_order = orderbook.create_order("init_user", 1, ask_price, quantity, False)
+
+            self.order_book.add_order(bid_order)
+            self.order_book.add_order(ask_order)
 
     def setup_ui(self):
         central_widget = QWidget()
@@ -159,7 +181,7 @@ class MainWindow(QMainWindow):
         self.bid_price_data.append(best_bid / 100.0)  # Convert to pounds
         self.ask_price_data.append(best_ask / 100.0)
 
-        recent_volume = self.order_book.get_recent_volume(1.0)
+        recent_volume = self.market_simulator.get_recent_volume(1.0)
         self.volume_data.append(recent_volume)
 
         if len(self.time_data) > 1:
@@ -229,12 +251,16 @@ class MainWindow(QMainWindow):
             self.depth_chart.setXRange(0, max_quantity * 1.1, padding=0)
 
     def update_statistics(self):
-        order_count = self.order_book.get_order_count()
-        spread = self.order_book.get_spread()
+        order_count = self.order_book.count()
+        spread_obj = self.order_book.get_spread()
+        spread = spread_obj.spread() if spread_obj else None
         best_bid = self.order_book.get_best_bid_price()
         best_ask = self.order_book.get_best_ask_price()
-        bid_depth = self.order_book.get_best_bid_depth()
-        ask_depth = self.order_book.get_best_ask_depth()
+
+        bid_quantities = self.order_book.get_bid_quantities()
+        ask_quantities = self.order_book.get_ask_quantities()
+        bid_depth = bid_quantities.get(best_bid, 0) if best_bid else 0
+        ask_depth = ask_quantities.get(best_ask, 0) if best_ask else 0
 
         self.order_count_label.setText(f"Order Count: {order_count}")
         if spread is not None:
