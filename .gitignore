@@ -40,3 +40,6 @@ _deps
 CMakeCache.txt
 _skbuild
 *.egg-info
+.idea
+
+orderbook/stubs

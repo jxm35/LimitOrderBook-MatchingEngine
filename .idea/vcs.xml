@@ -2,5 +2,9 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/_skbuild/macosx-15.0-arm64-3.11/cmake-build/_deps/googlebenchmark-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/build/_deps/googlebenchmark-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/googlebenchmark-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/googlebenchmark-src" vcs="Git" />
   </component>
 </project>
