@@ -1,7 +1,7 @@
 import random
 import threading
 import time
-from typing import Optional, Dict, List
+from typing import Optional, List
 from dataclasses import dataclass
 
 import orderbook
@@ -17,20 +17,14 @@ class Trade:
 class MarketSimulator:
     def __init__(self, cpp_orderbook):
         self.orderbook = cpp_orderbook
-        self.running = False
         self.simulation_thread: Optional[threading.Thread] = None
+        self.generator_ = None
+        self.running = False
+        self.last_ask = None
+        self.last_bid = None
 
         self.trades: List[Trade] = []
         self.base_username = "simulator"
-        self.min_deviance = 100
-
-        self.quantity_generator = lambda: max(50, int(random.normalvariate(100, 20)))
-        self.price_volatility = 5
-
-        self.buy_pressure_active = False
-        self.sell_pressure_active = False
-        self.pressure_duration = 5.0
-        self.pressure_start_time = 0
 
     def start_simulation(self):
         if self.running:
@@ -45,161 +39,136 @@ class MarketSimulator:
             self.simulation_thread.join()
 
     def add_buy_pressure(self):
-        self.buy_pressure_active = True
-        self.pressure_start_time = time.time()
-
         pressure_thread = threading.Thread(target=self._apply_buy_pressure, daemon=True)
         pressure_thread.start()
 
     def add_sell_pressure(self):
-        self.sell_pressure_active = True
-        self.pressure_start_time = time.time()
-
         pressure_thread = threading.Thread(target=self._apply_sell_pressure, daemon=True)
         pressure_thread.start()
 
     def _track_trade(self, price: int, quantity: int):
         self.trades.append(Trade(price, quantity, time.time()))
 
-    def _apply_buy_pressure(self):
-        start_time = time.time()
-        while (time.time() - start_time < self.pressure_duration and
-               self.running and self.buy_pressure_active):
-
-            quantity = self.quantity_generator()
-            old_matched = self.orderbook.get_orders_matched()
-            best_ask = self.orderbook.get_best_ask_price()
-            self.orderbook.place_market_buy_order(quantity)
-            new_matched = self.orderbook.get_orders_matched()
-            if new_matched > old_matched and best_ask:
-                self._track_trade(best_ask, new_matched - old_matched)
-
-            best_bid = self.orderbook.get_best_bid_price()
-            best_ask = self.orderbook.get_best_ask_price()
-
-            if best_bid and best_ask:
-                mid_price = (best_bid + best_ask) // 2
-                aggressive_price = mid_price + random.randint(50, 150)
-
-                order = orderbook.create_order("pressure_buyer", 1, aggressive_price,
-                                               self.quantity_generator(), True)
-                self.orderbook.add_order(order)
-
-            time.sleep(0.1)
-
-        self.buy_pressure_active = False
-
     def _apply_sell_pressure(self):
-        start_time = time.time()
-        while (time.time() - start_time < self.pressure_duration and
-               self.running and self.sell_pressure_active):
+        SECURITY_ID = 1
+        USERNAME = "test"
+        quantity_dist = lambda: self.generator_.normalvariate(100, 10)
+        place_limits = lambda: self.generator_.random() < 0.3
 
-            quantity = self.quantity_generator()
+        for i in range(500):
+            time.sleep(0.002) # sleep 2ms
 
-            old_matched = self.orderbook.get_orders_matched()
+            self.orderbook.place_market_sell_order(int(quantity_dist()))
             best_bid = self.orderbook.get_best_bid_price()
+            if best_bid is None:
+                best_bid = self.last_bid
 
-            self.orderbook.place_market_sell_order(quantity)
-
-            new_matched = self.orderbook.get_orders_matched()
-            if new_matched > old_matched and best_bid:
-                self._track_trade(best_bid, new_matched - old_matched)
-
-            best_bid = self.orderbook.get_best_bid_price()
             best_ask = self.orderbook.get_best_ask_price()
+            if best_ask is None:
+                best_ask = self.last_ask
 
-            if best_bid and best_ask:
-                mid_price = (best_bid + best_ask) // 2
-                aggressive_price = mid_price - random.randint(50, 150)
+            if place_limits() and (best_ask - best_bid) > 6:
+                mid_price = (best_ask + best_bid) / 2.0
+                bid_price_dist = lambda: self.generator_.normalvariate(best_bid, 3)
+                sell_price_dist = lambda: self.generator_.normalvariate(mid_price, 3)
 
-                order = orderbook.create_order("pressure_seller", 1, aggressive_price,
-                                               self.quantity_generator(), False)
-                self.orderbook.add_order(order)
+                sell_price = sell_price_dist()
+                buy_price = bid_price_dist()
 
-            time.sleep(0.1)
+                if sell_price < best_bid:
+                    sell_price = mid_price
+                if buy_price > sell_price:
+                    buy_price = best_bid
 
-        self.sell_pressure_active = False
+                ask = orderbook.create_order(USERNAME, SECURITY_ID, round(sell_price), round(quantity_dist()), False)
+                self.orderbook.add_order(ask)
+                self.last_ask = round(sell_price)
+
+                bid = orderbook.create_order(USERNAME, SECURITY_ID, round(buy_price), round(quantity_dist()), True)
+                self.orderbook.add_order(bid)
+                self.last_bid = round(buy_price)
+
+    def _apply_buy_pressure(self):
+        quantityDist = lambda: self.generator_.normalvariate(100, 10)
+        for i in range(500):
+            time.sleep(0.002) # sleep 2ms
+            self.orderbook.place_market_buy_order(int(quantityDist()))
+
+
+    def run_simulation(self):
+        SECURITY_ID = 1
+        USERNAME = "simulation"
+
+        bool_dist = lambda: self.generator_.random() < 0.5
+        quantity_dist = lambda: self.generator_.normalvariate(100, 10)
+
+        first_bid = orderbook.create_order(USERNAME, SECURITY_ID, 497_00, 2500, True)
+        first_ask = orderbook.create_order(USERNAME, SECURITY_ID, 503_00, 2500, False)
+        self.orderbook.add_order(first_bid)
+        self.orderbook.add_order(first_ask)
+
+        self.last_ask = 503_00
+        self.last_bid = 497_00
+        self.generator_ = random.Random()
+
+        while self.running:
+            time.sleep(0.01) # sleep 10ms
+
+            best_bid = self.orderbook.get_best_bid_price()
+            if best_bid is None:
+                best_bid = self.last_bid
+
+            best_ask = self.orderbook.get_best_ask_price()
+            if best_ask is None:
+                best_ask = self.last_ask
+
+            spread = max(1, best_ask - best_bid)
+            MIN_DEVIANCE = 1 + random.randint(0, spread - 1)
+
+            midPrice = (best_ask + best_bid) / 2.0
+
+            bid_mean = (best_bid + midPrice) / 2
+            ask_mean = (best_ask + midPrice) / 2
+            bid_price_dist = lambda: self.generator_.normalvariate(bid_mean, 5)
+            sell_price_dist = lambda: self.generator_.normalvariate(ask_mean, 5)
+
+            price_double = bid_price_dist()
+            price = round(price_double)
+            for j in range(2):
+                old_matched = self.orderbook.get_orders_matched()
+                if abs(midPrice - price_double) < MIN_DEVIANCE and abs(price_double - midPrice) < MIN_DEVIANCE:
+                    isBuy = bool_dist()
+                    qty_to_place = int(quantity_dist() / 2)
+                    if isBuy:
+                        self.orderbook.place_market_buy_order(qty_to_place)
+                    else:
+                        self.orderbook.place_market_sell_order(qty_to_place)
+                elif price > best_ask:
+                    ask = orderbook.create_order(USERNAME, SECURITY_ID, price, int(quantity_dist()), False)
+                    self.orderbook.add_order(ask)
+                    self.last_ask = price + 3_00
+                elif price < best_bid:
+                    bid = orderbook.create_order(USERNAME, SECURITY_ID, price, int(quantity_dist()), True)
+                    self.orderbook.add_order(bid)
+                    self.last_bid = price - 3_00
+                else:
+                    if price < midPrice:
+                        bid = orderbook.create_order(USERNAME, SECURITY_ID, price, int(quantity_dist()), True)
+                        self.orderbook.add_order(bid)
+                        self.last_bid = price - 3_00
+                    elif price > midPrice:
+                        ask = orderbook.create_order(USERNAME, SECURITY_ID, price, int(quantity_dist()), False)
+                        self.orderbook.add_order(ask)
+                        self.last_ask = price + 3_00
+                new_matched = self.orderbook.get_orders_matched()
+                if new_matched > old_matched:
+                    self._track_trade(price, new_matched - old_matched)
+
+                price_double = sell_price_dist()
+                price = round(price_double)
 
     def _simulation_loop(self):
-        while self.running:
-            try:
-                best_bid = self.orderbook.get_best_bid_price()
-                best_ask = self.orderbook.get_best_ask_price()
-
-                if best_bid is None or best_ask is None:
-                    time.sleep(0.1)
-                    continue
-
-                mid_price = (best_bid + best_ask) / 2.0
-                spread = best_ask - best_bid
-
-                activity_type = random.choices(
-                    ['limit_orders', 'market_order', 'cancel', 'nothing'],
-                    weights=[60, 15, 10, 15]
-                )[0]
-
-                if activity_type == 'limit_orders':
-                    self._add_limit_orders(best_bid, best_ask, mid_price, spread)
-                elif activity_type == 'market_order':
-                    self._add_market_order()
-                elif activity_type == 'cancel':
-                    pass
-
-                time.sleep(0.01)
-
-            except Exception as e:
-                print(f"Simulation error: {e}")
-                time.sleep(0.1)
-
-    def _add_limit_orders(self, best_bid: int, best_ask: int, mid_price: float, spread: int):
-        num_orders = random.randint(1, 2)
-
-        for _ in range(num_orders):
-            if random.random() < 0.3:
-                if random.random() < 0.5:
-                    price_range = max(100, spread // 2)
-                    price = best_bid + random.randint(-price_range, 0)
-                    is_buy = True
-                else:
-                    price_range = max(100, spread // 2)
-                    price = best_ask + random.randint(0, price_range)
-                    is_buy = False
-            else:
-                price_deviation = int(random.normalvariate(0, self.price_volatility * 100))
-                price = int(mid_price + price_deviation)
-                is_buy = price < mid_price
-
-            if abs(price - mid_price) < self.min_deviance:
-                continue
-
-            quantity = self.quantity_generator()
-            order = orderbook.create_order("sim_trader", 1, price, quantity, is_buy)
-            old_matched = self.orderbook.get_orders_matched()
-            self.orderbook.add_order(order)
-            new_matched = self.orderbook.get_orders_matched()
-
-            if new_matched > old_matched:
-                trade_qty = new_matched - old_matched
-                trade_price = best_ask if is_buy else best_bid
-                self._track_trade(trade_price, trade_qty)
-
-    def _add_market_order(self):
-        is_buy = random.random() < 0.5
-        quantity = self.quantity_generator() // 2
-
-        old_matched = self.orderbook.get_orders_matched()
-        if is_buy:
-            best_ask = self.orderbook.get_best_ask_price()
-            self.orderbook.place_market_buy_order(quantity)
-            trade_price = best_ask
-        else:
-            best_bid = self.orderbook.get_best_bid_price()
-            self.orderbook.place_market_sell_order(quantity)
-            trade_price = best_bid
-
-        new_matched = self.orderbook.get_orders_matched()
-        if new_matched > old_matched and trade_price:
-            self._track_trade(trade_price, new_matched - old_matched)
+        self.run_simulation()
 
     def get_recent_volume(self, seconds: float = 1.0) -> int:
         current_time = time.time()
